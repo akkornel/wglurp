@@ -1,0 +1,16 @@
+# Data caches
+*.db
+
+# Vi/Vim temp files
+.*.swn
+.*.swo
+.*.swp
+
+# Python compiled code
+stanford_wglurp/__pycache__
+stanford_wglurp/*.pyc
+
+# Setuptools artifacts
+build
+dist
+stanford_wglurp.egg-info
