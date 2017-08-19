@@ -1,0 +1,8 @@
+# vim: ts=4 sw=4 et filetype=cfg
+# -*- coding: utf-8 -*-
+
+# This is an example of how you can split up your wgulrp configuration
+# into multiple files.
+# Files in this directory are read _after_ the main .cfg file.
+
+# Files in this directory are parsed in sorted order. 

@@ -15,10 +15,11 @@
 # distribution, and also at
 # https://github.com/stanford-rc/wglurp/blob/master/LICENSE_others.md
 
+import os
 import re
 import setuptools
 from setuptools import setup, find_packages
-from sys import version_info
+from sys import argv, prefix, version_info
 
 # Check versions of Python and setuptools
 if (version_info[0] <= 2):
@@ -43,6 +44,23 @@ def version():
 def readme():
     with open('README.rst') as file:
         return file.read()
+
+
+# If doing a user install, skip the config file installation.
+if '--user' in argv:
+    data_files = None
+else:
+    data_files = [
+        (os.path.join(prefix, 'etc'), [
+            'etc/wglurp.conf',
+            ]
+        ),
+        (os.path.join(prefix, 'etc/wglurp.d'), [
+            'etc/example',
+            ]
+        )
+    ]
+
 
 # Let setuptools handle the rest
 setup(
@@ -73,6 +91,7 @@ setup(
             'wglurp-ldap = stanford_wglurp.ldap:main',
         ],
     },
+    data_files = data_files,
 
     license = 'GPL v2 or later',
 
