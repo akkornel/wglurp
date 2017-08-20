@@ -26,8 +26,11 @@ except ImportError:
 
 
 class LDAPCallback(BaseCallback):
-    records_processed_lock = threading.Lock()
-    records_processed = 0
+    # Track the number of records that we've seen
+    records_count_lock = threading.Lock()
+    records_added = 0
+    records_modified = 0
+    records_deleted = 0
 
     @classmethod
     def bind_complete(cls, ldap):
@@ -49,10 +52,6 @@ class LDAPCallback(BaseCallback):
         :return: None -- any returned value is ignored.
         """
 
-        # Reset our counter, to track the number of users processed
-        cls.records_processed_lock.acquire()
-        cls.records_processed = 0
-        cls.records_processed_lock.release()
         # Store the LDAP attribute names locally, to avoid lookups in-loop.
         unique_attribute = ConfigOption['ldap-attributes']['unique']
         username_attribute = ConfigOption['ldap-attributes']['username']
@@ -61,10 +60,6 @@ class LDAPCallback(BaseCallback):
         # Begin building our mapping of workgroups to users.
         workgroups = dict()
         for user in items:
-            cls.records_processed_lock.acquire()
-            cls.records_processed = cls.records_processed + 1
-            cls.records_processed_lock.release()
-
             uid    = items[user][unique_attribute][0]
             uname  = items[user][username_attribute][0]
             groups = items[user][groups_attribute]
@@ -82,10 +77,6 @@ class LDAPCallback(BaseCallback):
                     uname.decode('ascii'),)
                 )
 
-        # Reset our counter once again
-        cls.records_processed_lock.acquire()
-        cls.records_processed = 0
-        cls.records_processed_lock.release()
 
         # Now we have our workgroups, update the database!
         cls.db.execute('BEGIN TRANSACTION')
@@ -93,10 +84,6 @@ class LDAPCallback(BaseCallback):
         cls.db.execute('DELETE FROM workgroups')
         cls.db.execute('DELETE FROM members')
         for workgroup in workgroups:
-            cls.records_processed_lock.acquire()
-            cls.records_processed = cls.records_processed + 1
-            cls.records_processed_lock.release()
-
             cls.db.execute('''
                 INSERT INTO workgroups (name) VALUES (?)
                 ''',
@@ -140,7 +127,9 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
-        pass
+        cls.records_count_lock.acquire()
+        cls.records_added += 1
+        cls.records_count_lock.release()
 
 
     @classmethod
@@ -157,9 +146,9 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
-        cls.records_processed_lock.acquire()
-        cls.records_processed = cls.records_processed + 1
-        cls.records_processed_lock.release()
+        cls.records_count_lock.acquire()
+        cls.records_added = cls.records_added + 1
+        cls.records_count_lock.release()
 
 
     @classmethod
@@ -171,7 +160,9 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
-        pass
+        cls.records_count_lock.acquire()
+        cls.records_deleted = cls.records_deleted + 1
+        cls.records_count_lock.release()
 
 
     @classmethod
@@ -185,7 +176,9 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
-        pass
+        cls.records_count_lock.acquire()
+        cls.records_deleted = cls.records_deleted + 1
+        cls.records_count_lock.release()
 
 
     @classmethod
@@ -200,7 +193,10 @@ class LDAPCallback(BaseCallback):
         :param new_attrs: The new attributes.
         :type new_attrs: Dict of lists of bytes
         """
-        pass
+        cls.records_count_lock.acquire()
+        cls.records_modified = cls.records_modified + 1
+        cls.records_count_lock.release()
+
 
 
     @classmethod
@@ -218,7 +214,9 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
-        pass
+        cls.records_count_lock.acquire()
+        cls.records_modified = cls.records_modified + 1
+        cls.records_count_lock.release()
 
 
 def main():
@@ -253,9 +251,12 @@ def main():
     # Wait for the thread to end
     while client_thread.is_alive() is True:
         client_thread.join(timeout=5.0)
-        LDAPCallback.records_processed_lock.acquire()
-        print('Records processed:', LDAPCallback.records_processed)
-        LDAPCallback.records_processed_lock.release()
+        LDAPCallback.records_count_lock.acquire()
+        print('%d / %d / %d records added/modified/deleted'
+              % (LDAPCallback.records_added, LDAPCallback.records_modified,
+                 LDAPCallback.records_deleted)
+        )
+        LDAPCallback.records_count_lock.release()
 
 
     # Unbind and exit
