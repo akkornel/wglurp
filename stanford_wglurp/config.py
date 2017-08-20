@@ -55,7 +55,7 @@ def find_config_files():
 
 # This is our configuration object.  It's module-level-defined, and will be set
 # up the first time it is needed.
-ConfigObject = configparser.ConfigParser(
+ConfigOption = configparser.ConfigParser(
     delimiters = ('=',),
     comment_prefixes = ('#',),
 )
@@ -66,36 +66,37 @@ ConfigObject = configparser.ConfigParser(
 #
 
 # General options
-ConfigObject['general'] = {}
-ConfigObject['general']['systemd'] = 'False'
+ConfigOption['general'] = {}
+ConfigOption['general']['systemd'] = 'False'
 
 # Logging options
-ConfigObject['logging'] = {}
-ConfigObject['logging']['target'] = 'LOCAL4'
-ConfigObject['logging']['level'] = 'INFO'
+ConfigOption['logging'] = {}
+ConfigOption['logging']['target'] = 'LOCAL4'
+ConfigOption['logging']['level'] = 'INFO'
 
 # Metrics options
-ConfigObject['metrics'] = {}
-ConfigObject['metrics']['active'] = 'False'
-ConfigObject['metrics']['path'] = ''
+ConfigOption['metrics'] = {}
+ConfigOption['metrics']['active'] = 'False'
+ConfigOption['metrics']['path'] = ''
 
 # LDAP options
-ConfigObject['ldap'] = {}
-ConfigObject['ldap']['url'] = 'ldaps://ldap.stanford.edu:636'
-ConfigObject['ldap']['starttls'] = 'False'
-ConfigObject['ldap']['bind-method'] = 'anonymous'
-ConfigObject['ldap']['dn'] = 'dc=stanford,dc=edu'
-ConfigObject['ldap']['scope'] = 'sub'
-ConfigObject['ldap']['filter'] = '(objectClass=*)'
+ConfigOption['ldap'] = {}
+ConfigOption['ldap']['data'] = '/var/lib/wglurp/ldap-'
+ConfigOption['ldap']['url'] = 'ldaps://ldap.stanford.edu:636'
+ConfigOption['ldap']['starttls'] = 'False'
+ConfigOption['ldap']['bind-method'] = 'anonymous'
+ConfigOption['ldap']['dn'] = 'dc=stanford,dc=edu'
+ConfigOption['ldap']['scope'] = 'sub'
+ConfigOption['ldap']['filter'] = '(objectClass=*)'
 
-ConfigObject['ldap-simple'] = {}
-ConfigObject['ldap-simple']['dn'] = 'cn=wglurp,dc=stanford,dc=edu'
-ConfigObject['ldap-simple']['password'] = 'slurpglurp'
+ConfigOption['ldap-simple'] = {}
+ConfigOption['ldap-simple']['dn'] = 'cn=wglurp,dc=stanford,dc=edu'
+ConfigOption['ldap-simple']['password'] = 'slurpglurp'
 
-ConfigObject['ldap-attributes'] = {}
-ConfigObject['ldap-attributes']['unique'] = 'suRegId'
-ConfigObject['ldap-attributes']['username'] = 'uid'
-ConfigObject['ldap-attributes']['groups'] = 'memberOf'
+ConfigOption['ldap-attributes'] = {}
+ConfigOption['ldap-attributes']['unique'] = 'suRegId'
+ConfigOption['ldap-attributes']['username'] = 'uid'
+ConfigOption['ldap-attributes']['groups'] = 'memberOf'
 
 
 # Read in configuration files, if present.

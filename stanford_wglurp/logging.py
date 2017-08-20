@@ -83,7 +83,7 @@ from stanford_wglurp.config import ConfigObject
 
 
 # Get and configure our log destination
-destination = ConfigObject['logging']['target']
+destination = ConfigOption['logging']['target']
 logger.debug('Configured log target is %s', destination)
 
 # Next, configure the destination in configuration.
@@ -210,8 +210,8 @@ logger.info('Welcome to stanford_wglurp (%s) version %s!',
 
 
 # Set our log-level threshold.
-logger.info('Logging threshold changed to %s', ConfigObject['logging']['level'])
-logger.setLevel(ConfigObject['logging']['level'])
+logger.info('Logging threshold changed to %s', ConfigOption['logging']['level'])
+logger.setLevel(ConfigOption['logging']['level'])
 
 
 # That's it!  Clients can now log stuff through 'logger'.
