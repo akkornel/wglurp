@@ -88,7 +88,7 @@ def syslog_dest():
 destination = ConfigOption['logging']['target']
 logger.debug('Configured log target is %s', destination)
 
-# Next, configure the destination in configuration.
+# Next, configure the destination from configuration.
 if destination == "LOCAL1":
     # All the syslog destinations to essentially the same thing.
     # * Create a syslog handler, going to the right destination for the OS.
@@ -150,8 +150,9 @@ elif destination == "LOCAL7":
     )
     syslog_handler.setFormatter(formatter_default)
     logger.addHandler(syslog_handler)
+
+# For NT, we leverage native NT event logging
 elif destination == "NT":
-    # For NT, we leverage native NT event logging
     logger.info('Will log to the NT event log.')
     import pywin32
 
@@ -161,9 +162,11 @@ elif destination == "NT":
     )
     nt_handler.setFormatter(formatter_default)
     logger.addHandler(nt_handler)
+
+# For journald, we're a bit different, so we can leverage journald's stuff.
 elif destination == "JOURNALD":
-    # For journald, we're a bit different, so we can leverage journald's stuff.
     logger.info('Will log to journald.')
+    import systemd.journal
 
     # Our format is much simpler, because journald keeps track of all of the
     # other fields we normally have.
@@ -172,12 +175,12 @@ elif destination == "JOURNALD":
     )
 
     # Now we can configure and add the handler.
-    import systemd.journal
     journald_handler = systemd.journal.JournalHandler()
     journald_handler.setFormatter(formatter_journald)
     logger.addHandler(journald_handler)
+
+# Other strings are treated as filenames.
 else:
-    # Other strings are treated as filenames.
     # We'll use the watched-filer handler, to cope with log-rotation.
     logger.info('Will log to file at path %s.', destination)
     file_handler = logging.handlers.WatchedFileHandler(
@@ -188,7 +191,7 @@ else:
     logger.addHandler(file_handler)
 
 
-# If running in the foreground, log to stdout
+# If running in the foreground, also log to stdout
 if ('-f' in argv) or ('--foreground' in argv):
     logger.info('Running in foreground.  Logs will now go to stdout.  '
                 '(The next entry will log to both stdout and stderr.)')
@@ -197,7 +200,7 @@ if ('-f' in argv) or ('--foreground' in argv):
     )
     stdout_handler.setFormatter(formatter_default)
     logger.addHandler(stdout_handler)
-    
+
 # Even if not running in the foreground, stop stderr logging now.
 logger.info('Program-startup logging to stderr will now end.')
 logger.removeHandler(startup_handler)
