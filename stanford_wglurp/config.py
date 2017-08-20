@@ -19,6 +19,7 @@ import configparser
 from glob import glob
 from os import path
 from stanford_wglurp.logging import logger
+import re
 
 
 def find_config_files():
@@ -196,6 +197,47 @@ if ConfigBoolean['general']['systemd'] is True:
             'The systemd module is required when this setting is True.'
         )
 
+
+# Logging validation
+
+# Target checks first
+
+# NT requires the pywin32 module
+if ConfigOption['logging']['target'] is 'NT':
+    try:
+        import pywin32
+    except ModuleNotFoundError:
+        validation_error('logging', 'target',
+            'For "NT" logging, the pywin32 module must be installed.'
+        )
+
+# JOURNALD needs a couple of checks.
+if ConfigOption['logging']['target'] == "JOURNALD":
+    # We need [general] systemd to be true.
+    if ConfigBoolean['general']['systemd'] is False:
+        validation_error('logging', 'target',
+            'For "JOURNALD" logging, the [general] \'systemd\' setting '
+            'must be True.'
+        )
+
+    # Make sure the systemd.journal module is available.
+    try:
+        import systemd.journal
+    except ModuleNotFoundError:
+        validation_error('logging', 'target',
+            'For "JOURNALD" logging, the systemd.journal module is needed.'
+        )
+
+# Other non-LOCAL values need a path to a valid directory.
+if (
+    ConfigOption['logging']['target'] not in ['NT', 'JOURNALD']
+    and not re.fullmatch('^LOCAL[0-7]$', ConfigOption['logging']['target'])
+):
+    target_dir = path.dirname(ConfigOption['logging']['target'])
+    if not path.isdir(target_dir):
+        validation_error('logging', 'target',
+            '"%s" is not a valid directory.' % target_dir
+        )
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
