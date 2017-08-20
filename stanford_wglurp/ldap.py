@@ -72,9 +72,9 @@ class LDAPCallback(BaseCallback):
         # Begin building our mapping of workgroups to users.
         workgroups = dict()
         for user in items:
-            uid    = items[user][unique_attribute][0]
-            uname  = items[user][username_attribute][0]
             logger.debug('Reading group membership of DN "%s"...' % user)
+            uid    = items[user][unique_attribute][0].decode('ascii')
+            uname  = items[user][username_attribute][0].decode('ascii')
             groups = items[user][groups_attribute]
             logger.debug('DN "%s" has unique ID / username is %s / %s'
                          % (user, uid, uname)
@@ -89,12 +89,10 @@ class LDAPCallback(BaseCallback):
                 if group not in workgroups:
                     logger.info('Discovered group %s' % group)
                     workgroups[group] = list()
-                workgroups[group].append(
-                    (uid.decode('ascii'),
-                    uname.decode('ascii'),)
                 logger.debug('%s is a member of group %s'
                              % (uname, group)
                 )
+                workgroups[group].append((uid, uname)) # Yes, a tuple.
 
         logger.info('%d LDAP records processed to populate %d groups.'
                     % (len(items), len(workgroups))
