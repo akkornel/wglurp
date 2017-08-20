@@ -138,4 +138,31 @@ except configparser.ParsingError as e:
 # CONFIG VALIDATION
 #
 
-# 
+logger.debug('Valdating read configuration...')
+
+# We need to define a class here, because we want to set validation_passed
+# inside of validation_error.  But, validation_passed is a boolean, which means
+# setting it inside of a function localizes it!  So, to keep the value global,
+# we create a singleton class, which exists outside of validation_error.
+class ValidationResult:
+    validation_passed = True
+
+def validation_error(section, option, problem):
+    logger.critical('Configuration error detected!')
+    logger.critical('Section: [%s], Option: %s' % (section, option))
+    logger.critical('--> %s' % problem)
+    ValidationResult.validation_passed = False
+
+
+
+
+# At the very end, if any part of the validation did not pass, exit.
+if ValidationResult.validation_passed is False:
+    logger.critical('Configuration files fully parsed.  '
+                    'One or more errors detected.  Exiting now.'
+    )
+    exit(1)
+
+# We're (FINALLY) done!  Clients can access configuration via ConfigOption.
+# Booleans can also be accessed via ConfigBoolean.
+# The parsed LDAP URL is available at parsed_ldap_url.
