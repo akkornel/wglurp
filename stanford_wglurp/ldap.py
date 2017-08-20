@@ -10,6 +10,7 @@
 
 from ldapurl import LDAPUrl
 import signal
+from stanford_wglurp.config import ConfigOption, parsed_ldap_url
 import stanford_wglurp.db
 from syncrepl_client import Syncrepl, SyncreplMode
 from syncrepl_client.callbacks import BaseCallback
@@ -21,14 +22,6 @@ try:
 except ImportError:
     raise OSError('This Python is not built with thread support.  Sorry!')
 
-
-# TODO: Get LDAP URL
-# TODO: Get proper data path
-ldap_url = 'ldaps://ldap-uatmaster.stanford.edu:636/cn=people,dc=stanford,dc=edu?suPrivilegeGroup,uid?sub?(&(uid=*)(suPrivilegeGroup=*))?bindname=GSSAPI'
-ldap_data = '/tmp/wglurp-ldap'
-unique_attribute = 'suRegID'
-username_attribute = 'uid'
-groups_attribute = 'suPrivilegeGroup'
 
 
 
@@ -60,6 +53,10 @@ class LDAPCallback(BaseCallback):
         cls.records_processed_lock.acquire()
         cls.records_processed = 0
         cls.records_processed_lock.release()
+        # Store the LDAP attribute names locally, to avoid lookups in-loop.
+        unique_attribute = ConfigOption['ldap-attributes']['unique']
+        username_attribute = ConfigOption['ldap-attributes']['username']
+        groups_attribute = ConfigOption['ldap-attributes']['groups']
 
         # Begin building our mapping of workgroups to users.
         workgroups = dict()
@@ -257,26 +254,20 @@ class LDAPCallback(BaseCallback):
 def main():
 
 
-    # Set our LDAP URL's attribute list
-    real_ldap_url = LDAPUrl(ldap_url)
-    real_ldap_url.attrs = [
-        unique_attribute,
-        username_attribute,
-        groups_attribute
-    ]
+    # Building the LDAP URL (including our attributes list) took place as part
+    # of config. validation.
 
     # Connect to our database
     db = stanford_wglurp.db.connect()
     LDAPCallback.db = db
 
     # Set up our Syncrepl client
-    client = Syncrepl(
-            data_path = ldap_data,
-            callback  = LDAPCallback,
-            ldap_url  = real_ldap_url,
-            mode      = SyncreplMode.REFRESH_ONLY,
-    )
-    pass
+        client = Syncrepl(
+                data_path = ConfigOption['ldap']['data'],
+                callback  = LDAPCallback,
+                ldap_url  = parsed_ldap_url,
+                mode      = SyncreplMode.REFRESH_ONLY,
+        )
 
     # Set up a stop handler.
     def stop_handler(signal, frame):
