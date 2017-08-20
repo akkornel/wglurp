@@ -8,6 +8,8 @@
 #
 
 
+# Daemon threading requires Python 3.3+
+
 # We have to load the logger first!
 from stanford_wglurp.logging import logger
 
@@ -279,9 +281,13 @@ def main():
         logger.info('The received signal was %d' % signal)
         client.please_stop()
 
-    # Start our Syncrepl thread, and intercept signals
-    client_thread = threading.Thread(target = client.run)
+    # Start our Syncrepl thread, and intercept signals.
     logger.debug('Spawning client thread...')
+    client_thread = threading.Thread(
+        name='LDAP client',
+        target=client.run,
+        daemon=True
+    )
     logger.debug('Now installing signal handler.')
     signal.signal(signal.SIGHUP, stop_handler)
     signal.signal(signal.SIGINT, stop_handler)
