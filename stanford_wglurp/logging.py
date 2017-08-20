@@ -8,6 +8,7 @@
 # WARNING: Do not import config until after the logger is ready to go!
 import logging
 import logging.handlers
+from os import path
 from stanford_wglurp._version import __version__
 import sys
 from sys import argv, platform, stdout
@@ -37,7 +38,7 @@ startup_handler.setFormatter(formatter_default)
 
 # Log our first message!
 logger.info('stanford_wglurp (%s) version %s early startup...',
-             argv[0],
+             path.basename(argv[0]),
              __version__
 )
 
@@ -204,7 +205,7 @@ del startup_handler
 
 # Re-log the banner, so it goes to the new streams.
 logger.info('Welcome to stanford_wglurp (%s) version %s!',
-             argv[0],
+             path.basename(argv[0]),
              __version__
 )
 
