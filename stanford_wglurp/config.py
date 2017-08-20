@@ -68,6 +68,9 @@ ConfigOption = configparser.ConfigParser(
 # DEFAULT CONFIGURATION
 #
 
+
+logger.debug('Setting configuration defaults.')
+
 # General options
 ConfigOption['general'] = {}
 ConfigOption['general']['systemd'] = 'False'

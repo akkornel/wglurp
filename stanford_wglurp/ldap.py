@@ -8,6 +8,10 @@
 #
 
 
+# We have to load the logger first!
+from stanford_wglurp.logging import logger
+
+# Now we can import _most_ of our other stuff.
 from ldapurl import LDAPUrl
 import signal
 from stanford_wglurp.config import ConfigOption, parsed_ldap_url
@@ -20,9 +24,9 @@ from sys import exit
 try:
     import threading
 except ImportError:
-    raise OSError('This Python is not built with thread support.  Sorry!')
-
-
+    logger.alert('This Python is not built with thread support.')
+    logger.alert('The LDAP client daemon requires threading to operate.')
+    exit(1)
 
 
 class LDAPCallback(BaseCallback):
@@ -40,7 +44,7 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
-        pass
+        logger.info('LDAP bind complete!  We are "%s"' % ldap.whoami_s())
 
 
     @classmethod
@@ -52,17 +56,27 @@ class LDAPCallback(BaseCallback):
         :return: None -- any returned value is ignored.
         """
 
+        logger.info('LDAP server refresh complete!')
+        logger.info('Building view of current workgroups...')
+
         # Store the LDAP attribute names locally, to avoid lookups in-loop.
         unique_attribute = ConfigOption['ldap-attributes']['unique']
         username_attribute = ConfigOption['ldap-attributes']['username']
         groups_attribute = ConfigOption['ldap-attributes']['groups']
+        logger.info('unique / username / groups attributes are %s / %s / %s'
+                     % (unique_attribute, username_attribute, groups_attribute)
+        )
 
         # Begin building our mapping of workgroups to users.
         workgroups = dict()
         for user in items:
             uid    = items[user][unique_attribute][0]
             uname  = items[user][username_attribute][0]
+            logger.debug('Reading group membership of DN "%s"...' % user)
             groups = items[user][groups_attribute]
+            logger.debug('DN "%s" has unique ID / username is %s / %s'
+                         % (user, uid, uname)
+            )
 
             # Go through each of the user's member groups.
             for group in groups:
@@ -71,12 +85,18 @@ class LDAPCallback(BaseCallback):
                 # If the list doesn't exist, create it.
                 # Then add the user.
                 if group not in workgroups:
+                    logger.info('Discovered group %s' % group)
                     workgroups[group] = list()
                 workgroups[group].append(
                     (uid.decode('ascii'),
                     uname.decode('ascii'),)
+                logger.debug('%s is a member of group %s'
+                             % (uname, group)
                 )
 
+        logger.info('%d LDAP records processed to populate %d groups.'
+                    % (len(items), len(workgroups))
+        )
 
         # Now we have our workgroups, update the database!
         cls.db.execute('BEGIN TRANSACTION')
@@ -110,9 +130,12 @@ class LDAPCallback(BaseCallback):
         cls.db.close()
 
         # Now we can start doing stuff when an event comes in!
+        logger.debug('Monkey-patching add, delete, and change records...')
         cls.record_add = cls.record_add_persist
         cls.record_delete = cls.record_delete_persist
         cls.record_change = cls.record_change_persist
+
+        logger.info('Refresh-complete processing is complete!')
 
 
     @classmethod
@@ -127,6 +150,9 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
+        logger.debug('New record %s' % dn)
+        for attr in attrs:
+            logger.debug('--> %s = %s' % (attr, attrs[attr]))
         cls.records_count_lock.acquire()
         cls.records_added += 1
         cls.records_count_lock.release()
@@ -146,6 +172,9 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
+        logger.debug('New record %s' % dn)
+        for attr in attrs:
+            logger.debug('--> %s = %s' % (attr, attrs[attr]))
         cls.records_count_lock.acquire()
         cls.records_added = cls.records_added + 1
         cls.records_count_lock.release()
@@ -160,6 +189,7 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
+        logger.debug('Deleting record %s' % dn)
         cls.records_count_lock.acquire()
         cls.records_deleted = cls.records_deleted + 1
         cls.records_count_lock.release()
@@ -176,6 +206,7 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
+        logger.debug('Deleting record %s' % dn)
         cls.records_count_lock.acquire()
         cls.records_deleted = cls.records_deleted + 1
         cls.records_count_lock.release()
@@ -193,6 +224,7 @@ class LDAPCallback(BaseCallback):
         :param new_attrs: The new attributes.
         :type new_attrs: Dict of lists of bytes
         """
+        logger.debug('Record %s modified' % dn)
         cls.records_count_lock.acquire()
         cls.records_modified = cls.records_modified + 1
         cls.records_count_lock.release()
@@ -214,6 +246,7 @@ class LDAPCallback(BaseCallback):
         At the start, in the refresh phase, we don't do anything.
         Later on, we do stuff!
         """
+        logger.debug('Record %s modified' % dn)
         cls.records_count_lock.acquire()
         cls.records_modified = cls.records_modified + 1
         cls.records_count_lock.release()
@@ -230,23 +263,31 @@ def main():
     LDAPCallback.db = db
 
     # Set up our Syncrepl client
+        logger.info('LDAP URL is %s' % parsed_ldap_url.unparse())
+        logger.debug('Connecting to LDAP server...')
         client = Syncrepl(
                 data_path = ConfigOption['ldap']['data'],
                 callback  = LDAPCallback,
                 ldap_url  = parsed_ldap_url,
                 mode      = SyncreplMode.REFRESH_ONLY,
         )
+        logger.debug('Connection complete!')
 
     # Set up a stop handler.
     def stop_handler(signal, frame):
+        logger.warning('LDAP client stop handler has been called.')
+        logger.info('The received signal was %d' % signal)
         client.please_stop()
 
     # Start our Syncrepl thread, and intercept signals
     client_thread = threading.Thread(target = client.run)
+    logger.debug('Spawning client thread...')
+    logger.debug('Now installing signal handler.')
     signal.signal(signal.SIGHUP, stop_handler)
     signal.signal(signal.SIGINT, stop_handler)
     signal.signal(signal.SIGTERM, stop_handler)
     client_thread.start()
+    logger.info('LDAP client thread #%d launched!' % client_thread.ident)
 
     # Wait for the thread to end
     while client_thread.is_alive() is True:
@@ -260,6 +301,7 @@ def main():
 
 
     # Unbind and exit
+    logger.debug('Unbinding & disconnecting from the LDAP server.')
     client.unbind()
     exit(0)
 
