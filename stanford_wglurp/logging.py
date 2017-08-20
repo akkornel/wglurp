@@ -64,8 +64,13 @@ def handle_exception(exception_type, exception_value, exception_traceback):
 logger.debug('Installing custom last-resort exception-handler hook.')
 sys.excepthook = handle_exception
 
+
 # Now we can import our configuration!
-from stanford_wglurp.config import ConfigObject
+# WARNING: This can create a dependency loop!
+# WARNING: To resolve this loop, we must be loaded _first_.
+# We bring in validation_* because we have to validate the logging configs.
+from stanford_wglurp.config import ConfigOption, validation_error
+
 
 # Now we can set up logging, destination first.
 

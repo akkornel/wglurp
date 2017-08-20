@@ -8,14 +8,17 @@
 
 # Mapping protocol pushes our minimum Python version up to 3.2.
 
-# Make absolutely sure that logging is set up before we do anything.
-from stanford_wglurp.logging import logger
+# We can only be imported if the logging module is already imported.
+import sys
+if 'stanford_wglurp.logging' not in sys.modules:
+    raise ImportError('stanford_wglurp.logging must be imported first!')
 
-# Now we can add our other imports!
+# Now we can import everything!
+# (Except for sys, which was imported so we could do our import check.)
 import configparser
 from glob import glob
 from os import path
-import sys
+from stanford_wglurp.logging import logger
 
 
 def find_config_files():
