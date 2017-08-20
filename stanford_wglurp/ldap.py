@@ -14,6 +14,7 @@
 from stanford_wglurp.logging import logger
 
 # Now we can import _most_ of our other stuff.
+import ldap
 from ldapurl import LDAPUrl
 import signal
 from stanford_wglurp.config import ConfigOption, parsed_ldap_url
@@ -23,6 +24,7 @@ from syncrepl_client.callbacks import BaseCallback
 from sys import exit
 
 # We also need threading, which might not be present.
+# This is our last import (whew!).
 try:
     import threading
 except ImportError:
@@ -263,6 +265,7 @@ def main():
     LDAPCallback.db = db
 
     # Set up our Syncrepl client
+    try:
         logger.info('LDAP URL is %s' % parsed_ldap_url.unparse())
         logger.debug('Connecting to LDAP server...')
         client = Syncrepl(
@@ -272,6 +275,34 @@ def main():
                 mode      = SyncreplMode.REFRESH_ONLY,
         )
         logger.debug('Connection complete!')
+    except ldap.FILTER_ERROR:
+        logger.critical('The LDAP filter string "%s" is invalid.'
+                        % parsed_ldap_url.filterstr
+        )
+        exit(1)
+    except ldap.INVALID_CREDENTIALS:
+        logger.critical('The LDAP credentials provided were invalid.')
+        exit(1)
+    except ldap.LOCAL_ERROR as e:
+        logger.critical('A local error occurred connecting to the LDAP server.')
+        logger.critical('--> %s' % e)
+        exit(1)
+    except ldap.SERVER_DOWN:
+        logger.critical('The server at "%s" refused our connection or is down.'
+                        % parsed_ldap_url.hostport
+        )
+        exit(1)
+    except ldap.STRONG_AUTH_REQUIRED:
+        logger.critical('TLS is required by the LDAP server.'
+                        'Either use ldaps, or set [ldap] \'starttls\' to true.'
+        )
+        exit(1)
+    except ldap.TIMEOUT:
+        logger.critical('Connection to "%s" timed out.'
+                        % parsed_ldap_url.hostport
+        )
+        exit(1)
+
 
     # Set up a stop handler.
     def stop_handler(signal, frame):
