@@ -256,7 +256,6 @@ class LDAPCallback(BaseCallback):
 
 def main():
 
-
     # Building the LDAP URL (including our attributes list) took place as part
     # of config. validation.
 
