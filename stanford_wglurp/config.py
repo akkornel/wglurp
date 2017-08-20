@@ -154,6 +154,36 @@ def validation_error(section, option, problem):
     ValidationResult.validation_passed = False
 
 
+# First, let's check all our boolean values
+
+ConfigBoolean = {}
+boolean_validation_successful = True
+
+for section, option in [
+    ('general', 'systemd'),
+    ('metrics', 'active'),
+    ('ldap', 'starttls'),
+]:
+    try:
+        # Parse the boolean value, then store it into a dict for later access.
+        boolean_value = ConfigOption[section].getboolean(option)
+
+        # We're doing two-level dicts, so make sure the 2nd level is ready.
+        if section not in ConfigBoolean:
+            ConfigBoolean[section] = {}
+        ConfigBoolean[section][option] = boolean_value
+    except ValueError:
+        validation_error(section, option,
+            'This setting must be a boolean (true/false/yes/no/1/0) value.'
+        )
+        boolean_validation_successful = False
+
+# If there were any boolean problems, stop now.
+if boolean_validation_successful is False:
+    logger.critical('(Other errors may exist, but we have to stop here.)')
+    logger.critical('Configuration problems detected.  Exiting now.')
+    exit(1)
+del(boolean_validation_successful)
 
 
 # At the very end, if any part of the validation did not pass, exit.
