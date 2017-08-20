@@ -43,21 +43,6 @@ logger.info('stanford_wglurp (%s) version %s early startup...',
 )
 
 
-# Define a function to get the syslog log socket (which depends on the OS).
-def syslog_dest():
-    if platform.startswith('linux'):
-        # Linux uses one socket path.
-        logger.debug('Will use syslog socket at /dev/log')
-        return '/dev/log'
-    elif platform.startswith('darwin'):
-        # macOS uses a different socket path.
-        logger.debug('Will use syslog socket at /var/run/syslog')
-        return '/var/run/syslog'
-    else:
-        # Fall back to syslog over UDP.
-        logger.debug('Will log to localhost syslog port')
-        return ('localhost', 514)
-
 # Define a function to handle uncaught exceptions
 def handle_exception(exception_type, exception_value, exception_traceback):
     # Before we handle this exception, we temporarily restore the original
@@ -82,6 +67,22 @@ sys.excepthook = handle_exception
 # Now we can import our configuration!
 from stanford_wglurp.config import ConfigObject
 
+# Now we can set up logging, destination first.
+
+# Define a function to get the syslog log socket (which depends on the OS).
+def syslog_dest():
+    if platform.startswith('linux'):
+        # Linux uses one socket path.
+        logger.debug('Will use syslog socket at /dev/log')
+        return '/dev/log'
+    elif platform.startswith('darwin'):
+        # macOS uses a different socket path.
+        logger.debug('Will use syslog socket at /var/run/syslog')
+        return '/var/run/syslog'
+    else:
+        # Fall back to syslog over UDP.
+        logger.debug('Will log to localhost syslog port')
+        return ('localhost', 514)
 
 # Get and configure our log destination
 destination = ConfigOption['logging']['target']
