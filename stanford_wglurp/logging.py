@@ -49,16 +49,27 @@ def handle_exception(exception_type, exception_value, exception_traceback):
     # exception handler.  That way, if we throw another exception, we don't get
     # stuck forever!
     sys.excepthook = sys.__excepthook__
+
+    # Get the exception and traceback as an array of strings.
     exception_formatted = traceback.format_exception_only(
         exception_type, exception_value
     )
+    exception_formatted.append('TRACEBACK (failing call last):')
     exception_formatted.extend(traceback.format_list(
         traceback.extract_tb(exception_traceback)
     ))
-    for line in exception_formatted:
-        logger.critical(line.rstrip())
-    sys.excepthook = handle_exception
 
+    # Begin outputting the exception
+    logger.critical('UNCAUGHT EXCEPTION!')
+
+    # Each array entry is one or more lines.  Strip trailing whitespace, and
+    # then split individual lines for outputting.
+    for line in exception_formatted:
+        for real_line in line.rstrip().split("\n"):
+            logger.critical(real_line)
+
+    # Before we end, restore our exception handler.
+    sys.excepthook = handle_exception
 
 # Put our uncaught-exception handler in place
 logger.debug('Installing custom last-resort exception-handler hook.')
