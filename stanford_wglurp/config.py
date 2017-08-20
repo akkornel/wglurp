@@ -407,6 +407,10 @@ else:
 
 # Add filter to the URL.
 parsed_ldap_url.filterstr = ConfigOption['ldap']['filter']
+
+# There are no real checks to do for the ldap-simple items.
+
+# The ldap-simple items were also already added to the parsed URL.
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
