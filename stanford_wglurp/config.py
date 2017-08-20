@@ -17,9 +17,12 @@ if 'stanford_wglurp.logging' not in sys.modules:
 # (Except for sys, which was imported so we could do our import check.)
 import configparser
 from glob import glob
+from IPy import IP
+import ldapurl
 from os import path
 from stanford_wglurp.logging import logger
 import re
+import socket
 
 
 def find_config_files():
@@ -267,6 +270,78 @@ if (
         '"%s" does not refer to a valid directory.'
         % ConfigOption['metrics']['path']
     )
+
+
+# LDAP validation (including ldap-simple and ldap-attributes)!
+
+# First check data.
+ldap_dir = path.dirname(ConfigOption['ldap']['data'])
+if not path.isdir(ldap_dir):
+    validation_error('ldap', 'data',
+        '"%s" is not a valid directory.' % ldap_dir
+    )
+del(ldap_dir)
+
+# Now check url.
+
+# First we validate the LDAP URL by building it.
+try:
+    parsed_ldap_url = ldapurl.LDAPUrl(ConfigOption['ldap']['url'])
+except ValueError:
+    validation_error('ldap', 'url',
+        '"%s" is missing the URL scheme and/or :// separator'
+        % ConfigOption['ldap']['url']
+    )
+    logger.critical('Warning: Some [ldap] section checks may pass or fail '
+            'incorrectly.  Fix this problem and re-run to be sure.')
+    parsed_ldap_url = ldapurl.LDAPUrl('ldaps://localhost')
+
+# We've caught basic format and scheme issues.  Now check hostport.
+if parsed_ldap_url.hostport == '':
+    validation_error('ldap', 'url',
+        'LDAP URL must contain at least a valid hostname or IP address.'
+    )
+
+(ldap_host, ldap_port) = parsed_ldap_url.hostport.split(':')
+
+# Check host is a valid IP, or a resolvable name.
+try:
+    IP(ldap_host)
+except:
+    try:
+        socket.gethostbyname(ldap_host)
+    except socket.gaierror:
+        validation_error('ldap', 'uri',
+            '"%s" is either a bad IP, or an unresolveable hostname or FQDN.'
+            % ldap_host
+        )
+
+# Check port is a number in the right range.
+try:
+    ldap_port = int(ldap_port)
+    if ldap_port < 1 or ldap_port >= 65535:
+        validation_error('ldap', 'url',
+            'Port number "%s" is out of range.' % ldap_port
+        )
+except:
+    validation_error('ldap', 'url',
+        'Port "%s" is not a valid number.' % ldap_port
+    )
+
+# Done checking LDAP host & port (finally!)
+del(ldap_host)
+del(ldap_port)
+
+# Make sure other attributes weren't put into the URL.
+if (
+    len(parsed_ldap_url.dn) > 0
+    or parsed_ldap_url.filterstr is not None
+    or parsed_ldap_url.scope is not None
+    or parsed_ldap_url.attrs is not None
+    or len(parsed_ldap_url.extensions) > 0
+):
+    validation_error('ldap', 'url',
+        'Please do not add extra contents.  Just the scheme and hostport.')
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '

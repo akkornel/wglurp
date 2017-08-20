@@ -82,6 +82,7 @@ setup(
 
     python_requires = '>=3.3,<4',
     install_requires = [
+        'IPy',
         'pyldap',
         'syncrepl-client',
     ],
