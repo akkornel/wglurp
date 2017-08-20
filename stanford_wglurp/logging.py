@@ -215,8 +215,3 @@ logger.setLevel(ConfigOption['logging']['level'])
 
 
 # That's it!  Clients can now log stuff through 'logger'.
-def x():
-    raise OSError('sdkmfsdkmflsdlmkfdmklsf')
-def y():
-    x()
-y()
