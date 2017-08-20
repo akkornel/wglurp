@@ -6,7 +6,6 @@
 #
 #
 
-
 # Mapping protocol pushes our minimum Python version up to 3.2.
 
 import configparser
@@ -15,7 +14,7 @@ from os import path
 import sys
 
 
-def find_config_files:
+def find_config_files():
     """Finds all of the wglurp config files.
 
     :returns: A list of all the different config files to load.
@@ -42,7 +41,7 @@ def find_config_files:
 # This is our configuration object.  It's module-level-defined, and will be set
 # up the first time it is needed.
 ConfigObject = configparser.ConfigParser(
-    delimiters = ('',),
+    delimiters = ('=',),
     comment_prefixes = ('#',),
 )
 
@@ -53,20 +52,22 @@ ConfigObject = configparser.ConfigParser(
 
 # General options
 ConfigObject['general'] = {}
-ConfigObject['general']['systemd'] = False
+ConfigObject['general']['systemd'] = 'False'
 
 # Logging options
+ConfigObject['logging'] = {}
 ConfigObject['logging']['target'] = 'LOCAL4'
-ConfigObject['logging']['level'] = 'NOTICE'
+ConfigObject['logging']['level'] = 'INFO'
 
 # Metrics options
-ConfigObject['metrics']['active'] = False
-ConfigObject['metrics']['path'] = '/tmp/wglurp-metric'
+ConfigObject['metrics'] = {}
+ConfigObject['metrics']['active'] = 'False'
+ConfigObject['metrics']['path'] = ''
 
 # LDAP options
 ConfigObject['ldap'] = {}
 ConfigObject['ldap']['url'] = 'ldaps://ldap.stanford.edu:636'
-ConfigObject['ldap']['starttls'] = False
+ConfigObject['ldap']['starttls'] = 'False'
 ConfigObject['ldap']['bind-method'] = 'anonymous'
 ConfigObject['ldap']['dn'] = 'dc=stanford,dc=edu'
 ConfigObject['ldap']['scope'] = 'sub'
