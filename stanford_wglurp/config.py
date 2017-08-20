@@ -185,6 +185,16 @@ if boolean_validation_successful is False:
     exit(1)
 del(boolean_validation_successful)
 
+# General validation
+
+# Systemd needs the systemd module
+if ConfigBoolean['general']['systemd'] is True:
+    try:
+        import systemd
+    except ImportError:
+        validation_error('general', 'systemd',
+            'The systemd module is required when this setting is True.'
+        )
 
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
