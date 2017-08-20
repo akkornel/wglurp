@@ -106,7 +106,32 @@ ConfigOption['ldap-attributes']['groups'] = 'memberOf'
 
 
 # Read in configuration files, if present.
-ConfigObject.read(find_config_files(), encoding='utf-8')
+logger.debug('Reading configuration files...')
+try:
+    ConfigOption.read(find_config_files(), encoding='utf-8')
+except configparser.DuplicateSectionError as e:
+    logger.critical('Configuration error detected!')
+    logger.critical('In file "%s", line #%d' % (e.source, e.lineno))
+    logger.critical('--> Section [%s] was already defined in this file.'
+                    % e.section)
+    logger.critical('(Other errors may exist, but we have to stop here.)')
+    logger.critical('Configuration problems detected.  Exiting now.')
+    exit(1)
+except configparser.DuplicateOptionError as e:
+    logger.critical('Configuration error detected!')
+    logger.critical('In file "%s", line #%d, section [%s]'
+                    % (e.source, e.lineno, e.section))
+    logger.critical('--> Option \'%s\' was already defined in this file.'
+                    % e.option)
+    logger.critical('(Other errors may exist, but we have to stop here.)')
+    logger.critical('Configuration problems detected.  Exiting now.')
+    exit(1)
+except configparser.ParsingError as e:
+    logger.critical('Configuration error detected!')
+    logger.critical('--> Unable to parse file "%s"' % e.source)
+    logger.critical('(Other errors may exist, but we have to stop here.)')
+    logger.critical('Configuration problems detected.  Exiting now.')
+    exit(1)
 
 
 #
