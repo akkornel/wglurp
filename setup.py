@@ -80,7 +80,7 @@ setup(
     zip_safe = True,
     include_package_data = True,
 
-    python_requires = '>2,<4,!=3.0.*',
+    python_requires = '>=3.2,<4',
     install_requires = [
         'pyldap',
         'syncrepl-client',
