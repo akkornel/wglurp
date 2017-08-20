@@ -238,6 +238,18 @@ if (
         validation_error('logging', 'target',
             '"%s" is not a valid directory.' % target_dir
         )
+
+# Now check the level.
+
+# This is simple; there are only a few valid values.
+if ConfigOption['logging']['level'] not in [
+    'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+]:
+    validation_error('logging', 'level',
+        '"%s" is not a valid level.  Valid values are "DEBUG", "INFO", '
+        '"WARNING", "ERROR", and "CRITICAL".'
+        % ConfigOption['logging']['level']
+    )
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
