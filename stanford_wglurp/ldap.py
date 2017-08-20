@@ -125,7 +125,6 @@ class LDAPCallback(BaseCallback):
         # Now we can start doing stuff when an event comes in!
         cls.record_add = cls.record_add_persist
         cls.record_delete = cls.record_delete_persist
-        cls.record_rename = cls.record_rename_persist
         cls.record_change = cls.record_change_persist
 
 
@@ -180,35 +179,6 @@ class LDAPCallback(BaseCallback):
         """Called to indicate the deletion of an LDAP record.
 
         :param str dn: The DN of the deleted record.
-
-        :return: None - any returned value is ignored.
-
-        At the start, in the refresh phase, we don't do anything.
-        Later on, we do stuff!
-        """
-        pass
-
-
-    @classmethod
-    def record_rename_persist(cls, old_dn, new_dn):
-        """Called to indicate a change in DN, in the persist phase.
-
-        :param str old_dn: The old DN.
-
-        :param str new_dn: The new DN.
-
-        :return: None - any returned value is ignored.
-        """
-        pass
-
-
-    @classmethod
-    def record_rename(cls, old_dn, new_dn):
-        """Called to indicate a change in DN.
-
-        :param str old_dn: The old DN.
-
-        :param str new_dn: The new DN.
 
         :return: None - any returned value is ignored.
 
