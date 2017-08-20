@@ -250,6 +250,23 @@ if ConfigOption['logging']['level'] not in [
         '"WARNING", "ERROR", and "CRITICAL".'
         % ConfigOption['logging']['level']
     )
+
+
+# Metrics validation!
+
+# active was already checked, since it's a boolean.
+
+# Now check the path.
+
+# If active is true, then path must point to a directory.
+if (
+    ConfigBoolean['metrics']['active'] is True
+    and not path.isdir(ConfigOption['metrics']['path'])
+):
+    validation_error('metrics', 'path',
+        '"%s" does not refer to a valid directory.'
+        % ConfigOption['metrics']['path']
+    )
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
