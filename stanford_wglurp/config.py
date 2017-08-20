@@ -411,6 +411,23 @@ parsed_ldap_url.filterstr = ConfigOption['ldap']['filter']
 # There are no real checks to do for the ldap-simple items.
 
 # The ldap-simple items were also already added to the parsed URL.
+
+# Now check the ldap-attributes.
+
+# Each attribute must be alphanumeric only.
+# Also, add each attribute to the parsed URL.
+parsed_ldap_url.attrs = []
+attribute_regex = re.compile(r'^[a-z][a-z0-9-]*$', re.I)
+for attribute in ['unique', 'username', 'groups']:
+    if not attribute_regex.fullmatch(ConfigOption['ldap-attributes'][attribute]):
+        validation_error('ldap-attributes', attribute,
+            'Value "%s" is not a valid attribute name.'
+            % ConfigOption['ldap-attributes'][attribute]
+        )
+    if attribute not in parsed_ldap_url.attrs:
+        parsed_ldap_url.attrs.append(ConfigOption['ldap-attributes'][attribute])
+
+
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
