@@ -342,6 +342,71 @@ if (
 ):
     validation_error('ldap', 'url',
         'Please do not add extra contents.  Just the scheme and hostport.')
+
+# Now check starttls.
+
+# STARTTLS makes no sense when using ldaps or ldapi.
+if (
+    ConfigBoolean['ldap']['starttls'] is True
+    and parsed_ldap_url.urlscheme == 'ldaps'
+):
+    validation_error('ldap', 'starttls',
+        'Setting this to true makes no sense when using the "ldaps" scheme: '
+        'TLS is already being activated.'
+    )
+if (
+    ConfigBoolean['ldap']['starttls'] is True
+    and parsed_ldap_url.urlscheme == 'ldapi'
+):
+    validation_error('ldap', 'starttls',
+        'Setting this to true makes no sense when using the "ldapi" scheme: '
+        'UNIX domain sockets do not have a proper hostname to validate.'
+    )
+
+# Now check bind-method.
+
+# bind-method can be "anonymous", "simple", or "GSSAPI".
+if ConfigOption['ldap']['bind-method'] not in [
+    'anonymous', 'simple', 'GSSAPI'
+]:
+    validation_error('ldap', 'bind-method',
+        'Method "%s" is invalid.  Valid values are "anonymous", "simple", '
+        'and "GSSAPI".' % ConfigOption['ldap']['bind-method']
+    )
+
+# Add the bind method into the parsed URL.
+if ConfigOption['ldap']['bind-method'] == 'simple':
+    parsed_ldap_url.who = ConfigOptions['ldap-simple']['dn']
+    parsed_ldap_url.cred = ConfigOptions['ldap-simple']['password']
+elif ConfigOption['ldap']['bind-method'] == 'GSSAPI':
+    parsed_ldap_url.who = 'GSSAPI'
+
+# There are no real checks to do for dn.
+
+# Add DN to the URL.
+parsed_ldap_url.dn = ConfigOption['ldap']['dn']
+
+# Now check scope.
+
+# There are three possible values.
+# We check for a valid value and update the parsed URL in one go.
+if ConfigOption['ldap']['scope'] == 'one':
+    parsed_ldap_url.scope = ldapurl.LDAP_SCOPE_ONELEVEL
+elif ConfigOption['ldap']['scope'] == 'base':
+    parsed_ldap_url.scope = ldapurl.LDAP_SCOPE_BASE
+elif ConfigOption['ldap']['scope'] == 'sub':
+    parsed_ldap_url.scope = ldapurl.LDAP_SCOPE_SUBTREE
+else:
+    validation_error('ldap', 'scope',
+        'Scope "%s" is not valid.  Valid values are "one", "sub", and "base".'
+        % ConfigOption['ldap']['scope']
+    )
+
+# There are no real checks to do for the filer.
+# TODO: Maybe there are real checks to do for the filter?
+
+# Add filter to the URL.
+parsed_ldap_url.filterstr = ConfigOption['ldap']['filter']
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
     logger.critical('Configuration files fully parsed.  '
