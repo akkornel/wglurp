@@ -80,12 +80,47 @@ class LDAPCallback(BaseCallback):
         workgroups = dict()
         for user in items:
             logger.debug('Reading group membership of DN "%s"...' % user)
-            uid    = items[user][unique_attribute][0].decode('ascii')
-            uname  = items[user][username_attribute][0].decode('ascii')
-            groups = items[user][groups_attribute]
+
+            # Catch cases of missing unique attributes, and decoding issues.
+            try:
+                uid    = items[user][unique_attribute][0].decode('ascii')
+                uname  = items[user][username_attribute][0].decode('ascii')
+            except KeyError as e:
+                logger.error('Entry "%s" missing attribute %s'
+                             % (user, str(e))
+                )
+                continue
+            except UnicodeError as e:
+                logger.error('Error decoding uid/uname of entry "%s": %s'
+                             % (user, str(e))
+                )
+                continue
+
+            # Unique attributes can't be multi-valued either!
+            if len(uid) != 1:
+                logger.error('Entry "%s" has a multi-values \'%s\' attribute!'
+                             % (user, uid)
+                )
+                continue
+            if len(uname) != 1:
+                logger.error('Entry "%s" has a multi-values \'%s\' attribute!'
+                             % (user, uname)
+                )
+                continue
+
+            # Finally our uid and uname are known for this user!
             logger.debug('DN "%s" has unique ID / username is %s / %s'
                          % (user, uid, uname)
             )
+
+            # Our multivalued attribute is allowed to be missing/empty
+            if groups_attribute not in items[user]:
+                logger.warning('User ID %s (%s) has no groups.'
+                               % (uid, uname)
+                )
+                groups = list()
+            else:
+                groups = items[user][groups_attribute]
 
             # Go through each of the user's member groups.
             for group in groups:
