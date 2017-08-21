@@ -33,6 +33,11 @@ except ImportError:
     exit(1)
 
 
+#
+# LDAP CALLBACK CLASS
+#
+
+
 class LDAPCallback(BaseCallback):
     # Track the number of records that we've seen
     records_count_lock = threading.Lock()
@@ -334,7 +339,7 @@ def main():
         LDAPCallback.records_count_lock.release()
 
 
-    # Unbind and exit
+    # Unbind, cleanup, and exit.
     logger.debug('Unbinding & disconnecting from the LDAP server.')
     client.unbind()
     exit(0)
