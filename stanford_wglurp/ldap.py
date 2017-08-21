@@ -14,14 +14,17 @@
 from stanford_wglurp.logging import logger
 
 # Now we can import _most_ of our other stuff.
+import fcntl
 import ldap
 from ldapurl import LDAPUrl
+from os import fsync, path
 import signal
-from stanford_wglurp.config import ConfigOption, parsed_ldap_url
+from stanford_wglurp.config import ConfigBoolean, ConfigOption, parsed_ldap_url
 import stanford_wglurp.db
 from syncrepl_client import Syncrepl, SyncreplMode
 from syncrepl_client.callbacks import BaseCallback
 from sys import exit
+import time
 
 # We also need threading, which might not be present.
 # This is our last import (whew!).
@@ -294,6 +297,56 @@ class LDAPCallback(BaseCallback):
         cls.records_count_lock.release()
 
 
+#
+# METRICS WRITER
+#
+
+def write_metrics(metrics_file, stats_class, finish_event):
+    # Loop as long as finish_event has not been triggered
+    while not finish_event.is_set():
+
+        # Get lock on file and on stats
+        logger.debug('Metrics writer acquiring records lock.')
+        stats_class.records_count_lock.acquire()
+        logger.debug('Metrics writer acquiring file lock.')
+        fcntl.lockf(metrics_file, fcntl.LOCK_EX)
+
+        # Write out stats
+        logger.debug('Metrics writer updating stats.')
+        metrics_file.seek(0)
+        metrics_file.truncate(0)
+        print('records.last_updated', round(time.time()),
+            sep='=', file=metrics_file
+        )
+        print('records.added', stats_class.records_added,
+            sep='=', file=metrics_file
+        )
+        print('records.modified', stats_class.records_modified,
+            sep='=', file=metrics_file
+        )
+        print('records.deleted', stats_class.records_deleted,
+            sep='=', file=metrics_file
+        )
+
+        # Flush file, release locks, and either sleep or end.
+        # Note we don't actually release the lock, we downgrade it.
+        logger.debug('Metrics writer releasing locks.')
+        metrics_file.flush()
+        fsync(metrics_file.fileno())
+        fcntl.lockf(metrics_file, fcntl.LOCK_SH)
+        stats_class.records_count_lock.release()
+
+        # If finish hasn't already triggered, then sleep.
+        if not finish_event.is_set():
+            logger.debug('Metrics writer sleeping...')
+            time.sleep(1)
+    logger.debug('Metrics writer exiting!')
+
+
+#
+# MAIN BLOCK
+#
+
 def main():
 
     # Building the LDAP URL (including our attributes list) took place as part
@@ -302,6 +355,27 @@ def main():
     # Connect to our database
     db = stanford_wglurp.db.connect()
     LDAPCallback.db = db
+
+    # If doing metrics, open our metrics file.
+    if ConfigBoolean['metrics']['active'] is True:
+        logger.debug('Enabling metrics.')
+        metrics_file_path = path.join(
+            ConfigOption['metrics']['path'],
+            'ldap'
+        )
+        logger.info('Metrics will write to "%s"' % metrics_file_path)
+        try:
+            metrics_file = open(metrics_file_path,
+                mode='w+',
+                encoding='utf-8'
+            )
+        except Exception as e:
+            logger.critical('Unable to open metrics file "%s"!'
+                            % metrics_file_path
+            )
+            logger.critical('--> %s' % e)
+            exit(1)
+        fcntl.lockf(metrics_file, fcntl.LOCK_SH)
 
     # Set up our Syncrepl client
     try:
@@ -363,23 +437,44 @@ def main():
     client_thread.start()
     logger.info('LDAP client thread #%d launched!' % client_thread.ident)
 
+    # Start our metrics thread
+    if ConfigBoolean['metrics']['active'] is True:
+        metrics_event = threading.Event()
+        metrics_thread = threading.Thread(
+            name='LDAP metrics',
+            target=write_metrics,
+            daemon=True,
+            args=(metrics_file, LDAPCallback, metrics_event)
+        )
+        metrics_thread.start()
+        logger.info('LDAP metrics thread #%d launched!' % metrics_thread.ident)
+
+
     # Wait for the thread to end
     while client_thread.is_alive() is True:
         client_thread.join(timeout=5.0)
-        LDAPCallback.records_count_lock.acquire()
-        print('%d / %d / %d records added/modified/deleted'
-              % (LDAPCallback.records_added, LDAPCallback.records_modified,
-                 LDAPCallback.records_deleted)
-        )
-        LDAPCallback.records_count_lock.release()
 
+    # If metrics are running, signal them to stop.
+    # Before closing, write out zeroes, to prevent fake stats being collected.
+    if ConfigBoolean['metrics']['active'] is True:
+        logger.debug('Signaling metrics thread to exit.')
+        metrics_event.set()
+        metrics_thread.join()
+        fcntl.lockf(metrics_file, fcntl.LOCK_EX)
+        print('records.added=0', 'records.modified=0',
+              'records.deleted=0',
+                sep="\n", file=metrics_file
+        )
+        metrics_file.flush()
+        fsync(metrics_file.fileno())
+        fcntl.lockf(metrics_file, fcntl.LOCK_UN)
+        metrics_file.close()
 
     # Unbind, cleanup, and exit.
     logger.debug('Unbinding & disconnecting from the LDAP server.')
     client.unbind()
     exit(0)
 
-    # TODO: Put in stats-gathering code
     # TODO: Handle join result
     # TODO: Systemd link-up
 
