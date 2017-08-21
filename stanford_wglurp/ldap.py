@@ -28,8 +28,8 @@ from sys import exit
 try:
     import threading
 except ImportError:
-    logger.alert('This Python is not built with thread support.')
-    logger.alert('The LDAP client daemon requires threading to operate.')
+    logger.critical('This Python is not built with thread support.')
+    logger.critical('The LDAP client daemon requires threading to operate.')
     exit(1)
 
 
