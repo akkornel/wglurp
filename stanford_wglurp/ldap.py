@@ -19,12 +19,13 @@ import ldap
 from ldapurl import LDAPUrl
 from os import fsync, path
 import signal
-from stanford_wglurp.config import ConfigBoolean, ConfigOption, parsed_ldap_url
 import stanford_wglurp.db
 from syncrepl_client import Syncrepl, SyncreplMode
 from syncrepl_client.callbacks import BaseCallback
 from sys import exit
 import time
+
+from .config import ConfigBoolean, ConfigOption, parsed_ldap_url
 
 # We also need threading, which might not be present.
 # This is our last import (whew!).
