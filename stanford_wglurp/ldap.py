@@ -131,6 +131,7 @@ class LDAPCallback(BaseCallback):
         cls.record_add = cls.record_add_persist
         cls.record_delete = cls.record_delete_persist
         cls.record_change = cls.record_change_persist
+        cls.record_rename = cls.record_rename_persist
 
         logger.info('Refresh-complete processing is complete!')
 
@@ -299,6 +300,56 @@ class LDAPCallback(BaseCallback):
         cls.records_count_lock.acquire()
         cls.records_deleted = cls.records_deleted + 1
         cls.records_count_lock.release()
+
+    @classmethod
+    def record_rename_persist(cls, old_dn, new_dn, cursor):
+        """Called to indicate the change of an LDAP record's DN.
+
+        :param str old_dn: The old DN.
+
+        :param str new_dn: The new DN.
+
+        :return: None - any returned value is ignored.
+
+        Since we track the DN in our database, we need to update it!
+        """
+        # Start by getting the unique ID and username for this user.
+        cursor.execute('''
+            SELECT uniqueid
+              FROM members
+             WHERE dn = ?
+        ''', (old_dn,))
+        member_info = cursor.fetchone()
+        if (member_info is None):
+            logger.error('Trying to change nonexistant DN "%s"' % dn)
+            return
+
+        # Update the DN in the DB.
+        cursor.execute('''
+            UPDATE members
+               SET dn = ?
+             WHERE uniqueid = ?
+        ''', (new_dn, member_info[0]))
+
+        # Let Syncrepl handle the transaction.
+        # No stats tracking; the change callback will handle that!
+
+
+    @classmethod
+    def record_rename(cls, old_dn, new_dn, cursor):
+        """Called to indicate the change of an LDAP record's DN.
+
+        :param str old_dn: The old DN.
+
+        :param str new_dn: The new DN.
+
+        :return: None - any returned value is ignored.
+
+        At the start, in the refresh phase, we don't do anything.
+        Later on, we do stuff!
+        """
+        # No stats tracking; the change callback will handle that!
+        pass
 
 
     @classmethod
