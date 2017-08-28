@@ -19,7 +19,7 @@ import ldap
 from ldapurl import LDAPUrl
 from os import fsync, path
 import signal
-import stanford_wglurp.db
+import sqlite3
 from syncrepl_client import Syncrepl, SyncreplMode
 from syncrepl_client.callbacks import BaseCallback
 from sys import exit
@@ -61,6 +61,26 @@ class LDAPCallback(BaseCallback):
                     % ldap.whoami_s()
         )
 
+        # Create database tables, if needed.
+        logger.debug('Creating workgroup tables in Syncrepl database.')
+        cursor.executescript('''
+            CREATE TABLE IF NOT EXISTS workgroups (
+                name VARCHAR(128) PRIMARY KEY
+            );
+
+            CREATE TABLE IF NOT EXISTS members (
+                uniqueid VARCHAR(128) PRIMARY KEY,
+                username VARCHAR(128) UNIQUE
+            );
+
+            CREATE TABLE IF NOT EXISTS workgroup_members (
+                workgroup_name UNSIGNED INT REFERENCES workgroups (name),
+                member_id VARCHAR(128) REFERENCES members (uniqueid)
+            );
+        ''')
+
+        logger.info('Beginning refresh...')
+
 
     @classmethod
     def refresh_done(cls, items, cursor):
@@ -72,6 +92,14 @@ class LDAPCallback(BaseCallback):
         """
 
         logger.info('LDAP server refresh complete!')
+
+        logger.info('Clearing database...')
+        cursor.executescript('''
+            DELETE FROM workgroup_members;
+            DELETE FROM workgroups;
+            DELETE FROM members;
+        ''')
+
         logger.info('Building view of current workgroups...')
 
         # Store the LDAP attribute names locally, to avoid lookups in-loop.
@@ -82,8 +110,13 @@ class LDAPCallback(BaseCallback):
                      % (unique_attribute, username_attribute, groups_attribute)
         )
 
-        # Begin building our mapping of workgroups to users.
-        workgroups = dict()
+        # Start going through all of the users.
+        # We do the following things, in order:
+        # * Validate and decode the unique and username attributes.
+        # * Add the user to the members table (if not already there).
+        # * Decode the member group names.
+        # * Add the group names to the groups table (if not already there).
+        # * Add entries in the member-group mapping.
         for user in items:
             logger.debug('Reading group membership of DN "%s"...' % user)
 
@@ -120,9 +153,16 @@ class LDAPCallback(BaseCallback):
                 break
 
             # Finally our uid and uname are known for this user!
-            logger.debug('DN "%s" has unique ID / username is %s / %s'
+            # Add them to the database.
+            logger.debug('DN "%s"\'s unique ID / username is %s / %s'
                          % (user, unique_username[0], unique_username[1])
             )
+            cursor.execute('''
+                INSERT
+                  INTO members
+                      (uniqueid, username)
+                VALUES (?, ?)
+            ''', tuple(unique_username))
 
             # Our multivalued attribute is allowed to be missing/empty
             if groups_attribute not in items[user]:
@@ -146,51 +186,33 @@ class LDAPCallback(BaseCallback):
                     break
 
                 # If the list doesn't exist, create it.
-                # Then add the user.
                 if group not in workgroups:
                     logger.info('Discovered group %s' % group)
-                    workgroups[group] = list()
+                    cursor.execute('''
+                        INSERT
+                          INTO workgroups
+                               (name)
+                        VALUES (?)
+                    ''', (group,))
+
+                # Now we can add the user to the workgroup!
                 logger.debug('%s is a member of group %s'
                              % (unique_username[1], group)
                 )
-                workgroups[group].append(
-                    tuple(unique_username)
-                ) # Yes, a tuple.
+                cursor.execute('''
+                    INSERT
+                      INTO workgroup_members
+                           (workgroup_name, member_id)
+                    VALUES (?, ?)
+                ''', (group, unique_username[0]))
 
         logger.info('%d LDAP records processed to populate %d groups.'
                     % (len(items), len(workgroups))
         )
 
-        # Now we have our workgroups, update the database!
-        cls.db.execute('BEGIN TRANSACTION')
-        cls.db.execute('DELETE FROM workgroup_members')
-        cls.db.execute('DELETE FROM workgroups')
-        cls.db.execute('DELETE FROM members')
-        for workgroup in workgroups:
-            cls.db.execute('''
-                INSERT INTO workgroups (name) VALUES (?)
-                ''',
-                (workgroup,)
-            )
-            for data in workgroups[workgroup]:
-                cls.db.execute('''
-                    INSERT OR IGNORE INTO members
-                    (uniqueid, username)
-                    VALUES (?, ?)
-                    ''',
-                    data
-                )
-                cls.db.execute('''
-                    INSERT INTO workgroup_members
-                    (workgroup_name, member_id)
-                    VALUES (?, ?)
-                    ''',
-                    (workgroup, data[0], )
-                )
+        # The commit will happen as soon as the callback ends!
 
-        # Finish our DB changes
-        cls.db.commit()
-        cls.db.close()
+        # TODO: Send sync messages.
 
         # Now we can start doing stuff when an event comes in!
         logger.debug('Monkey-patching add, delete, and change records...')
@@ -369,10 +391,6 @@ def main():
 
     # Building the LDAP URL (including our attributes list) took place as part
     # of config. validation.
-
-    # Connect to our database
-    db = stanford_wglurp.db.connect()
-    LDAPCallback.db = db
 
     # If doing metrics, open our metrics file.
     if ConfigBoolean['metrics']['active'] is True:
