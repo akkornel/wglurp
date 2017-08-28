@@ -120,13 +120,13 @@ class LDAPCallback(BaseCallback):
 
             # Finally our uid and uname are known for this user!
             logger.debug('DN "%s" has unique ID / username is %s / %s'
-                         % (user, uid, uname)
+                         % (user, unique_username[0], unique_username[1])
             )
 
             # Our multivalued attribute is allowed to be missing/empty
             if groups_attribute not in items[user]:
                 logger.warning('User ID %s (%s) has no groups.'
-                               % (uid, uname)
+                               % (unique_username[0], unique_username[1])
                 )
                 groups = list()
             else:
@@ -142,9 +142,11 @@ class LDAPCallback(BaseCallback):
                     logger.info('Discovered group %s' % group)
                     workgroups[group] = list()
                 logger.debug('%s is a member of group %s'
-                             % (uname, group)
+                             % (unique_username[1], group)
                 )
-                workgroups[group].append((uid, uname)) # Yes, a tuple.
+                workgroups[group].append(
+                    tuple(unique_username)
+                ) # Yes, a tuple.
 
         logger.info('%d LDAP records processed to populate %d groups.'
                     % (len(items), len(workgroups))
