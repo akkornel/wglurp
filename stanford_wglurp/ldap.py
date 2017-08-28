@@ -50,6 +50,47 @@ class LDAPCallback(BaseCallback):
     records_deleted = 0
 
     @classmethod
+    def get_unique_username(cls, user, unique_attribute, username_attribute):
+        """Get the unique ID and username from the LDAP record.
+
+        :param dict user: The attributes dict from the LDAP record.
+
+        :param str unique_attribute: The name of the unique ID attribute.
+
+        :param str username_attribute: The name of the username attribute.
+
+        :returns: A tuple of the unique ID and username, or None.
+        """
+        unique_username = list()
+        for attribute_name in (unique_attribute, username_attribute):
+            # In one operation, we access the attribute list (can throw
+            # KeyError), access the first item (can throw IndexError), and
+            # decode it (can throw UnicodeError).  Saves us alot of checks!
+            attribute_value_list = user[attribute_name]
+            try:
+                unique_username.append(
+                    attribute_value_list[0].decode('ascii')
+                )
+            except (KeyError, IndexError):
+                logger.warning('Entry "%s" is missing the required '
+                               '\'%s\' attribute!' % (user, attribute_name)
+                )
+                return None
+            except UnicodeError as e:
+                logger.warning('Error decoding the \'%s\' of entry "%s": %s'
+                               % (attribute_name, user, str(e))
+                )
+                return None
+            # Finally, catch if the attribute is multi-valued.
+            if len(attribute_value_list) > 1:
+                logger.error('Entry "%s" has a multi-valued '
+                             '\'%s\' attribute!' % (user, attribute_name)
+                )
+                return None
+        return tuple(unique_username)
+
+
+    @classmethod
     def bind_complete(cls, ldap, cursor):
         """Called to mark a successful bind to the LDAP server.
 
@@ -122,36 +163,14 @@ class LDAPCallback(BaseCallback):
         for user in items:
             logger.debug('Reading group membership of DN "%s"...' % user)
 
-            # Catch cases where attributes are missing, or multi-valued.
-            unique_username = []
-            for attribute_name in (unique_attribute, username_attribute):
-                # In one operation, we access the attribute list (can throw
-                # KeyError), access the first item (can throw IndexError), and
-                # decode it (can throw UnicodeError).  Saves us alot of checks!
-                attribute_value_list = items[user][attribute_name]
-                try:
-                    unique_username.append(
-                        attribute_value_list[0].decode('ascii')
-                    )
-                except (KeyError, IndexError):
-                    logger.warning('Entry "%s" is missing the required '
-                                   '\'%s\' attribute!' % (user, attribute_name)
-                    )
-                    break
-                except UnicodeError as e:
-                    logger.warning('Error decoding the \'%s\' of entry "%s": %s'
-                                   % (attribute_name, user, str(e))
-                    )
-                    break
-                # Finally, catch if the attribute is multi-valued.
-                if len(attribute_value_list) > 1:
-                    logger.error('Entry "%s" has a multi-valued '
-                                 '\'%s\' attribute!' % (user, attribute_name)
-                    )
-                    break
+            # Get the unique ID and the username.
+            # This catches cases where attributes are missing, or multi-valued.
+            unique_username = cls.get_unique_username(
+                items[user], unique_attribute, username_attribute
+            )
 
             # If we didn't run through the for() loop twice; skip this user.
-            if len(unique_username) != 2:
+            if unique_username is None:
                 break
 
             # Finally our uid and uname are known for this user!
@@ -164,7 +183,7 @@ class LDAPCallback(BaseCallback):
                   INTO members
                       (uniqueid, username)
                 VALUES (?, ?)
-            ''', tuple(unique_username))
+            ''', unique_username)
 
             # Our multivalued attribute is allowed to be missing/empty
             if groups_attribute not in items[user]:
