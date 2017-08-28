@@ -117,6 +117,8 @@ class LDAPCallback(BaseCallback):
         # * Decode the member group names.
         # * Add the group names to the groups table (if not already there).
         # * Add entries in the member-group mapping.
+        # (We keep a separate workgroups list to minimize unnecessary INSERTs.)
+        workgroups = list()
         for user in items:
             logger.debug('Reading group membership of DN "%s"...' % user)
 
@@ -194,6 +196,7 @@ class LDAPCallback(BaseCallback):
                                (name)
                         VALUES (?)
                     ''', (group,))
+                    workgroups.append(group)
 
                 # Now we can add the user to the workgroup!
                 logger.debug('%s is a member of group %s'
