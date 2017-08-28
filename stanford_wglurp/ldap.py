@@ -54,6 +54,11 @@ class LDAPCallback(BaseCallback):
     username_attribute = None
     groups_attribute = None
 
+    # Placeholders for attribute encodings
+    unique_encoding = None
+    username_encoding = None
+    groups_encoding = None
+
     @classmethod
     def bind_complete(cls, ldap, cursor):
         """Called to mark a successful bind to the LDAP server.
@@ -158,14 +163,17 @@ class LDAPCallback(BaseCallback):
         # Get the unique ID and the username.
         # This catches cases where attributes are missing, or multi-valued.
         unique_username = list()
-        for attribute_name in (cls.unique_attribute, cls.username_attribute):
+        for (attribute_name, attribute_encoding) in (
+            (cls.unique_attribute, cls.unique_encoding),
+            (cls.username_attribute, cls.username_encoding)
+        ):
             # In one operation, we access the attribute list (can throw
             # KeyError), access the first item (can throw IndexError), and
             # decode it (can throw UnicodeError).  Saves us alot of checks!
             attribute_value_list = attrs[attribute_name]
             try:
                 unique_username.append(
-                    attribute_value_list[0].decode('ascii')
+                    attribute_value_list[0].decode(attribute_encoding)
                 )
             except (KeyError, IndexError):
                 logger.warning('Entry "%s" is missing the required '
@@ -173,8 +181,10 @@ class LDAPCallback(BaseCallback):
                 )
                 break
             except UnicodeError as e:
-                logger.warning('Error decoding the \'%s\' of entry "%s": %s'
-                               % (attribute_name, user, str(e))
+                logger.warning('Error %s decoding the \'%s\' of entry "%s": %s'
+                               % (attribute_encoding, attribute_name,
+                                  user, str(e)
+                                 )
                 )
                 break
             # Finally, catch if the attribute is multi-valued.
@@ -214,7 +224,7 @@ class LDAPCallback(BaseCallback):
         for group in groups:
             # First, decode the group name to a string.
             try:
-                group = group.decode('ascii')
+                group = group.decode(cls.groups_encoding)
             except UnicodeError:
                 logger.error('Could not decode group name "%s"; '
                              'user %s (%s) is a member.  Skipping.'
@@ -551,10 +561,19 @@ def main():
     LDAPCallback.unique_attribute = ConfigOption['ldap-attributes']['unique']
     LDAPCallback.username_attribute = ConfigOption['ldap-attributes']['username']
     LDAPCallback.groups_attribute = ConfigOption['ldap-attributes']['groups']
+    LDAPCallback.unique_encoding = ConfigOption['ldap-encodings']['unique']
+    LDAPCallback.username_encoding = ConfigOption['ldap-encodings']['username']
+    LDAPCallback.groups_encoding = ConfigOption['ldap-encodings']['groups']
     logger.info('unique / username / groups attributes are %s / %s / %s'
                 % (LDAPCallback.unique_attribute,
                    LDAPCallback.username_attribute,
                    LDAPCallback.groups_attribute
+                  )
+    )
+    logger.info('unique / username / groups encodings are %s / %s / %s'
+                % (LDAPCallback.unique_encoding,
+                   LDAPCallback.username_encoding,
+                   LDAPCallback.groups_encoding
                   )
     )
 
