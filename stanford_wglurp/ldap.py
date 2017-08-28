@@ -134,7 +134,15 @@ class LDAPCallback(BaseCallback):
 
             # Go through each of the user's member groups.
             for group in groups:
-                group = group.decode('ascii')
+                try:
+                    group = group.decode('ascii')
+                except UnicodeError:
+                    logger.error('Could not decode group name "%s"; '
+                                 'user %s (%s) is a member.  Skipping.'
+                                 % (group,
+                                    unique_username[0]. unique_username[1])
+                    )
+                    break
 
                 # If the list doesn't exist, create it.
                 # Then add the user.
