@@ -86,32 +86,37 @@ class LDAPCallback(BaseCallback):
         for user in items:
             logger.debug('Reading group membership of DN "%s"...' % user)
 
-            # Catch cases of missing unique attributes, and decoding issues.
-            try:
-                uid    = items[user][unique_attribute][0].decode('ascii')
-                uname  = items[user][username_attribute][0].decode('ascii')
-            except KeyError as e:
-                logger.error('Entry "%s" missing attribute %s'
-                             % (user, str(e))
-                )
-                continue
-            except UnicodeError as e:
-                logger.error('Error decoding uid/uname of entry "%s": %s'
-                             % (user, str(e))
-                )
-                continue
+            # Catch cases where attributes are missing, or multi-valued.
+            unique_username = []
+            for attribute_name in (unique_attribute, username_attribute):
+                # In one operation, we access the attribute list (can throw
+                # KeyError), access the first item (can throw IndexError), and
+                # decode it (can throw UnicodeError).  Saves us alot of checks!
+                attribute_value_list = items[user][attribute_name]
+                try:
+                    unique_username.append(
+                        attribute_value_list[0].decode('ascii')
+                    )
+                except (KeyError, IndexError):
+                    logger.warning('Entry "%s" is missing the required '
+                                   '\'%s\' attribute!' % (user, attribute_name)
+                    )
+                    break
+                except UnicodeError as e:
+                    logger.warning('Error decoding the \'%s\' of entry "%s": %s'
+                                   % (attribute_name, user, str(e))
+                    )
+                    break
+                # Finally, catch if the attribute is multi-valued.
+                if len(attribute_value_list) > 1:
+                    logger.error('Entry "%s" has a multi-valued '
+                                 '\'%s\' attribute!' % (user, attribute_name)
+                    )
+                    break
 
-            # Unique attributes can't be multi-valued either!
-            if len(uid) != 1:
-                logger.error('Entry "%s" has a multi-values \'%s\' attribute!'
-                             % (user, uid)
-                )
-                continue
-            if len(uname) != 1:
-                logger.error('Entry "%s" has a multi-values \'%s\' attribute!'
-                             % (user, uname)
-                )
-                continue
+            # If we didn't run through the for() loop twice; skip this user.
+            if len(unique_username) != 2:
+                break
 
             # Finally our uid and uname are known for this user!
             logger.debug('DN "%s" has unique ID / username is %s / %s'
