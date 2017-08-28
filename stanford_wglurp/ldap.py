@@ -56,7 +56,9 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
-        logger.info('LDAP bind complete!  We are "%s"' % ldap.whoami_s())
+        logger.info('LDAP bind complete!  We are "%s". Beginning refresh...'
+                    % ldap.whoami_s()
+        )
 
 
     @classmethod
