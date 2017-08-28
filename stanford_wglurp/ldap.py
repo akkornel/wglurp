@@ -489,6 +489,7 @@ def main():
 
     # Unbind, cleanup, and exit.
     logger.debug('Unbinding & disconnecting from the LDAP server.')
+    client.db_reconnect()
     client.unbind()
     exit(0)
 
