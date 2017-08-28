@@ -519,6 +519,11 @@ def main():
         metrics_event.set()
         metrics_thread.join()
         fcntl.lockf(metrics_file, fcntl.LOCK_EX)
+        metrics_file.seek(0)
+        metrics_file.truncate(0)
+        print('records.last_updated', round(time.time()),
+            sep='=', file=metrics_file
+        )
         print('records.added=0', 'records.modified=0',
               'records.deleted=0',
                 sep="\n", file=metrics_file
