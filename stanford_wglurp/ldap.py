@@ -49,46 +49,10 @@ class LDAPCallback(BaseCallback):
     records_modified = 0
     records_deleted = 0
 
-    @classmethod
-    def get_unique_username(cls, user, unique_attribute, username_attribute):
-        """Get the unique ID and username from the LDAP record.
-
-        :param dict user: The attributes dict from the LDAP record.
-
-        :param str unique_attribute: The name of the unique ID attribute.
-
-        :param str username_attribute: The name of the username attribute.
-
-        :returns: A tuple of the unique ID and username, or None.
-        """
-        unique_username = list()
-        for attribute_name in (unique_attribute, username_attribute):
-            # In one operation, we access the attribute list (can throw
-            # KeyError), access the first item (can throw IndexError), and
-            # decode it (can throw UnicodeError).  Saves us alot of checks!
-            attribute_value_list = user[attribute_name]
-            try:
-                unique_username.append(
-                    attribute_value_list[0].decode('ascii')
-                )
-            except (KeyError, IndexError):
-                logger.warning('Entry "%s" is missing the required '
-                               '\'%s\' attribute!' % (user, attribute_name)
-                )
-                return None
-            except UnicodeError as e:
-                logger.warning('Error decoding the \'%s\' of entry "%s": %s'
-                               % (attribute_name, user, str(e))
-                )
-                return None
-            # Finally, catch if the attribute is multi-valued.
-            if len(attribute_value_list) > 1:
-                logger.error('Entry "%s" has a multi-valued '
-                             '\'%s\' attribute!' % (user, attribute_name)
-                )
-                return None
-        return tuple(unique_username)
-
+    # Placeholders for the attribute names
+    unique_attribute = None
+    username_attribute = None
+    groups_attribute = None
 
     @classmethod
     def bind_complete(cls, ldap, cursor):
@@ -141,95 +105,20 @@ class LDAPCallback(BaseCallback):
             DELETE FROM members;
         ''')
 
-        logger.info('Building view of current workgroups...')
-
-        # Store the LDAP attribute names locally, to avoid lookups in-loop.
-        unique_attribute = ConfigOption['ldap-attributes']['unique']
-        username_attribute = ConfigOption['ldap-attributes']['username']
-        groups_attribute = ConfigOption['ldap-attributes']['groups']
-        logger.info('unique / username / groups attributes are %s / %s / %s'
-                    % (unique_attribute, username_attribute, groups_attribute)
-        )
-
         # Start going through all of the users.
-        # We do the following things, in order:
-        # * Validate and decode the unique and username attributes.
-        # * Add the user to the members table (if not already there).
-        # * Decode the member group names.
-        # * Add the group names to the groups table (if not already there).
-        # * Add entries in the member-group mapping.
-        # (We keep a separate workgroups list to minimize unnecessary INSERTs.)
-        workgroups = list()
+        # Since this is the same as a single add, let's call that method.
+        # We cache 
+        logger.info('Building view of current workgroups...')
+        add_method = cls.record_add_persist
+        groups_created = set()
         for user in items:
-            logger.debug('Reading group membership of DN "%s"...' % user)
-
-            # Get the unique ID and the username.
-            # This catches cases where attributes are missing, or multi-valued.
-            unique_username = cls.get_unique_username(
-                items[user], unique_attribute, username_attribute
+            groups_modified = add_method(
+                user, items[user], cursor, send_message=False
             )
-
-            # If we didn't run through the for() loop twice; skip this user.
-            if unique_username is None:
-                break
-
-            # Finally our uid and uname are known for this user!
-            # Add them to the database.
-            logger.debug('DN "%s"\'s unique ID / username is %s / %s'
-                         % (user, unique_username[0], unique_username[1])
-            )
-            cursor.execute('''
-                INSERT
-                  INTO members
-                      (uniqueid, username)
-                VALUES (?, ?)
-            ''', unique_username)
-
-            # Our multivalued attribute is allowed to be missing/empty
-            if groups_attribute not in items[user]:
-                logger.warning('User ID %s (%s) has no groups.'
-                               % (unique_username[0], unique_username[1])
-                )
-                groups = list()
-            else:
-                groups = items[user][groups_attribute]
-
-            # Go through each of the user's member groups.
-            for group in groups:
-                try:
-                    group = group.decode('ascii')
-                except UnicodeError:
-                    logger.error('Could not decode group name "%s"; '
-                                 'user %s (%s) is a member.  Skipping.'
-                                 % (group,
-                                    unique_username[0]. unique_username[1])
-                    )
-                    break
-
-                # If the list doesn't exist, create it.
-                if group not in workgroups:
-                    logger.info('Discovered group %s' % group)
-                    cursor.execute('''
-                        INSERT
-                          INTO workgroups
-                               (name)
-                        VALUES (?)
-                    ''', (group,))
-                    workgroups.append(group)
-
-                # Now we can add the user to the workgroup!
-                logger.debug('%s is a member of group %s'
-                             % (unique_username[1], group)
-                )
-                cursor.execute('''
-                    INSERT
-                      INTO workgroup_members
-                           (workgroup_name, member_id)
-                    VALUES (?, ?)
-                ''', (group, unique_username[0]))
+            groups_created |= set(groups_modified)
 
         logger.info('%d LDAP records processed to populate %d groups.'
-                    % (len(items), len(workgroups))
+                    % (len(items), len(groups_created))
         )
 
         # The commit will happen as soon as the callback ends!
@@ -246,7 +135,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_add_persist(cls, dn, attrs, cursor):
+    def record_add_persist(cls, dn, attrs, cursor, send_message=True):
         """Called to indicate the addition of a new LDAP record, in the persist
         phase.
 
@@ -255,14 +144,123 @@ class LDAPCallback(BaseCallback):
         :param attrs: The record's attributes.
         :type attrs: Dict of lists of bytes
 
-        :return: None - any returned value is ignored.
+        :return: The list of workgroups modified.
         """
-        logger.debug('New record %s' % dn)
-        for attr in attrs:
-            logger.debug('DN %s: %s = %s' % (dn, attr, attrs[attr]))
-        cls.records_count_lock.acquire()
-        cls.records_added += 1
-        cls.records_count_lock.release()
+        # We do the following things, in order:
+        # * Validate and decode the unique and username attributes.
+        # * Add the user to the members table (if not already there).
+        # * Decode the member group names.
+        # * Add the group names to the groups table (if not already there).
+        # * Add entries in the member-group mapping.
+
+        # Get the unique ID and the username.
+        # This catches cases where attributes are missing, or multi-valued.
+        unique_username = list()
+        for attribute_name in (cls.unique_attribute, cls.username_attribute):
+            # In one operation, we access the attribute list (can throw
+            # KeyError), access the first item (can throw IndexError), and
+            # decode it (can throw UnicodeError).  Saves us alot of checks!
+            attribute_value_list = attrs[attribute_name]
+            try:
+                unique_username.append(
+                    attribute_value_list[0].decode('ascii')
+                )
+            except (KeyError, IndexError):
+                logger.warning('Entry "%s" is missing the required '
+                               '\'%s\' attribute!' % (user, attribute_name)
+                )
+                break
+            except UnicodeError as e:
+                logger.warning('Error decoding the \'%s\' of entry "%s": %s'
+                               % (attribute_name, user, str(e))
+                )
+                break
+            # Finally, catch if the attribute is multi-valued.
+            if len(attribute_value_list) > 1:
+                logger.error('Entry "%s" has a multi-valued '
+                             '\'%s\' attribute!' % (user, attribute_name)
+                )
+                break
+
+        # If we didn't run through the for() loop twice, skip this user.
+        # (The error/warning would have been logged already.
+        if unique_username is None:
+            return 0
+
+        # Finally our uid and uname are known for this user!
+        # Add them to the database.
+        logger.debug('DN "%s"\'s unique ID / username is %s / %s'
+                     % (dn, unique_username[0], unique_username[1])
+        )
+        cursor.execute('''
+            INSERT
+              INTO members
+                  (uniqueid, username)
+            VALUES (?, ?)
+        ''', tuple(unique_username))
+
+        # Our multivalued attribute is allowed to be missing/empty
+        if cls.groups_attribute not in attrs:
+            logger.warning('User ID %s (%s) has no groups.'
+                           % (unique_username[0], unique_username[1])
+            )
+            groups = list()
+        else:
+            groups = attrs[cls.groups_attribute]
+
+        # Go through each of the user's member groups.
+        for group in groups:
+            # First, decode the group name to a string.
+            try:
+                group = group.decode('ascii')
+            except UnicodeError:
+                logger.error('Could not decode group name "%s"; '
+                             'user %s (%s) is a member.  Skipping.'
+                             % (group,
+                                unique_username[0]. unique_username[1])
+                )
+                break
+
+            # Now, find out if the group already exists.
+            cursor.execute('''
+                SELECT COUNT(*)
+                  FROM workgroups
+                 WHERE name = ?
+            ''', (group,))
+            workgroup_count = cursor.fetchone()
+
+            # If the list doesn't exist, create it.
+            if workgroup_count[0] == 0:
+                logger.info('Discovered group %s' % group)
+                cursor.execute('''
+                    INSERT
+                      INTO workgroups
+                           (name)
+                    VALUES (?)
+                ''', (group,))
+
+            # Now we can add the user to the workgroup!
+            logger.debug('%s (%s) is a member of group %s'
+                         % (unique_username[0], unique_username[1], group)
+            )
+            cursor.execute('''
+                INSERT
+                  INTO workgroup_members
+                       (workgroup_name, member_id)
+                VALUES (?, ?)
+            ''', (group, unique_username[0]))
+
+            # Also, send a message about the group addition.
+            # NOTE: This is disabled if we are being called by refresh_done.
+            if send_message is True:
+                # TODO: Send "add" message.
+                cls.records_count_lock.acquire()
+                cls.records_added = cls.records_added + 1
+                cls.records_count_lock.release()
+                pass
+
+        # Syncrepl will handle committing, once the callback ends!
+        return groups
 
 
     @classmethod
@@ -434,6 +432,17 @@ def main():
             logger.critical('--> %s' % e)
             exit(1)
         fcntl.lockf(metrics_file, fcntl.LOCK_SH)
+
+    # Store the LDAP attribute names in the callback.
+    LDAPCallback.unique_attribute = ConfigOption['ldap-attributes']['unique']
+    LDAPCallback.username_attribute = ConfigOption['ldap-attributes']['username']
+    LDAPCallback.groups_attribute = ConfigOption['ldap-attributes']['groups']
+    logger.info('unique / username / groups attributes are %s / %s / %s'
+                % (LDAPCallback.unique_attribute,
+                   LDAPCallback.username_attribute,
+                   LDAPCallback.groups_attribute
+                  )
+    )
 
     # Set up our Syncrepl client
     try:
