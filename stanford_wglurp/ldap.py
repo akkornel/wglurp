@@ -301,6 +301,68 @@ class LDAPCallback(BaseCallback):
         cls.records_deleted = cls.records_deleted + 1
         cls.records_count_lock.release()
 
+        # Start by getting the unique ID and username for this user.
+        cursor.execute('''
+            SELECT uniqueid, username
+              FROM members
+             WHERE dn = ?
+        ''', (dn,))
+        member_info = cursor.fetchone()
+        if (member_info is None):
+            logger.error('Trying to delete nonexistant DN "%s"' % dn)
+            return
+
+        # Look up all of the member's groups
+        cursor.execute('''
+            SELECT workgroup_name
+              FROM workgroup_members
+             WHERE member_id = ?
+        ''', (member_info[0],))
+        groups_list = cursor.fetchall()
+
+        # For each membership, remove the mapping and send a message.
+        for group_tuple in groups_list:
+            group = group_tuple[0]
+            logger.info('Removing user %s (%s) from group %s'
+                        % (member_info[0], member_info[1], group)
+            )
+            cursor.execute('''
+                DELETE
+                  FROM workgroup_members
+                 WHERE workgroup_name = ?
+                   AND member_id = ?
+            ''', (group, member_info[0]))
+
+            # Is the group empty now?  If yes, then delete it.
+            cursor.execute('''
+                SELECT COUNT(*)
+                  FROM workgroup_members
+                 WHERE workgroup_name = ?
+            ''', (group,))
+            membership_count = cursor.fetchone()
+            if membership_count[0] == 0:
+                logger.info('Group %s is now empty.' % group)
+                cursor.execute('''
+                    DELETE
+                      FROM workgroups
+                     WHERE name = ?
+                ''', (group,))
+
+            # TODO: Send "User removed from group" message.
+
+        # Finally, delete the member entry entirely.
+        logger.info('Removing deleted user %s (%s), who had DN "%s"'
+                    % (member_info[0], member_info[1], dn)
+        )
+        cursor.execute('''
+            DELETE
+              FROM members
+             WHERE dn = ?
+        ''', (dn,))
+
+        # All done!
+
+
     @classmethod
     def record_rename_persist(cls, old_dn, new_dn, cursor):
         """Called to indicate the change of an LDAP record's DN.
