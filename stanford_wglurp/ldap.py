@@ -57,7 +57,7 @@ class LDAPCallback(BaseCallback):
 
         :return: None - any returned value is ignored.
         """
-        logger.info('LDAP bind complete!  We are "%s". Beginning refresh...'
+        logger.info('LDAP bind complete!  We are "%s".'
                     % ldap.whoami_s()
         )
 
@@ -107,7 +107,7 @@ class LDAPCallback(BaseCallback):
         username_attribute = ConfigOption['ldap-attributes']['username']
         groups_attribute = ConfigOption['ldap-attributes']['groups']
         logger.info('unique / username / groups attributes are %s / %s / %s'
-                     % (unique_attribute, username_attribute, groups_attribute)
+                    % (unique_attribute, username_attribute, groups_attribute)
         )
 
         # Start going through all of the users.
@@ -240,7 +240,7 @@ class LDAPCallback(BaseCallback):
         """
         logger.debug('New record %s' % dn)
         for attr in attrs:
-            logger.debug('--> %s = %s' % (attr, attrs[attr]))
+            logger.debug('DN %s: %s = %s' % (dn, attr, attrs[attr]))
         cls.records_count_lock.acquire()
         cls.records_added += 1
         cls.records_count_lock.release()
@@ -262,7 +262,7 @@ class LDAPCallback(BaseCallback):
         """
         logger.debug('New record %s' % dn)
         for attr in attrs:
-            logger.debug('--> %s = %s' % (attr, attrs[attr]))
+            logger.debug('DN %s: %s = %s' % (dn, attr, attrs[attr]))
         cls.records_count_lock.acquire()
         cls.records_added = cls.records_added + 1
         cls.records_count_lock.release()
