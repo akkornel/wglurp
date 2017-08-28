@@ -84,7 +84,7 @@ setup(
     install_requires = [
         'IPy',
         'pyldap',
-        'syncrepl-client',
+        'syncrepl-client>=0.96',
     ],
     provides = ['stanford_wglurp'],
     entry_points = {

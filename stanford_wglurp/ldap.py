@@ -49,7 +49,7 @@ class LDAPCallback(BaseCallback):
     records_deleted = 0
 
     @classmethod
-    def bind_complete(cls, ldap):
+    def bind_complete(cls, ldap, cursor):
         """Called to mark a successful bind to the LDAP server.
 
         :param ldap.LDAPObject ldap: The LDAP object.
@@ -60,7 +60,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def refresh_done(cls, items):
+    def refresh_done(cls, items, cursor):
         """Called to mark the end of the refresh phase.
 
         :param dict items: The items currently in the directory.
@@ -184,7 +184,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_add_persist(cls, dn, attrs):
+    def record_add_persist(cls, dn, attrs, cursor):
         """Called to indicate the addition of a new LDAP record, in the persist
         phase.
 
@@ -204,7 +204,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_add(cls, dn, attrs):
+    def record_add(cls, dn, attrs, cursor):
         """Called to indicate the addition of a new LDAP record.
 
         :param str dn: The DN of the added record.
@@ -226,7 +226,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_delete_persist(cls, dn):
+    def record_delete_persist(cls, dn, cursor):
         """Called to indicate the deletion of an LDAP record, in the persist
         phase.
 
@@ -241,7 +241,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_delete(cls, dn):
+    def record_delete(cls, dn, cursor):
         """Called to indicate the deletion of an LDAP record.
 
         :param str dn: The DN of the deleted record.
@@ -258,7 +258,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_change_persist(cls, dn, old_attrs, new_attrs):
+    def record_change_persist(cls, dn, old_attrs, new_attrs, cursor):
         """Called when a record changes in the persist phase.
 
         :param str dn: The DN of the changed record.
@@ -277,7 +277,7 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
-    def record_change(cls, dn, old_attrs, new_attrs):
+    def record_change(cls, dn, old_attrs, new_attrs, cursor):
         """Called when a record changes.
 
         :param str dn: The DN of the changed record.
