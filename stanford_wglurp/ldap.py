@@ -74,7 +74,8 @@ class LDAPCallback(BaseCallback):
             );
 
             CREATE TABLE IF NOT EXISTS members (
-                uniqueid VARCHAR(128) PRIMARY KEY,
+                dn       TEXT         PRIMARY KEY,
+                uniqueid VARCHAR(128) UNIQUE,
                 username VARCHAR(128) UNIQUE
             );
 
@@ -195,9 +196,9 @@ class LDAPCallback(BaseCallback):
         cursor.execute('''
             INSERT
               INTO members
-                  (uniqueid, username)
-            VALUES (?, ?)
-        ''', tuple(unique_username))
+                  (dn, uniqueid, username)
+            VALUES (?, ?, ?)
+        ''', (dn, unique_username[0], unique_username[1]))
 
         # Our multivalued attribute is allowed to be missing/empty
         if cls.groups_attribute not in attrs:
