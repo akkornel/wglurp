@@ -15,6 +15,7 @@ if 'stanford_wglurp.logging' not in sys.modules:
 
 # Now we can import everything!
 # (Except for sys, which was imported so we could do our import check.)
+import codecs
 import configparser
 from glob import glob
 from IPy import IP
@@ -107,6 +108,11 @@ ConfigOption['ldap-attributes'] = {}
 ConfigOption['ldap-attributes']['unique'] = 'suRegId'
 ConfigOption['ldap-attributes']['username'] = 'uid'
 ConfigOption['ldap-attributes']['groups'] = 'memberOf'
+
+ConfigOption['ldap-encodings'] = {}
+ConfigOption['ldap-encodings']['unique'] = 'ascii'
+ConfigOption['ldap-encodings']['username'] = 'ascii'
+ConfigOption['ldap-encodings']['groups'] = 'ascii'
 
 
 # Read in configuration files, if present.
@@ -427,6 +433,18 @@ for attribute in ['unique', 'username', 'groups']:
     if attribute not in parsed_ldap_url.attrs:
         parsed_ldap_url.attrs.append(ConfigOption['ldap-attributes'][attribute])
 
+# Now check ldap-encodings.
+
+# There are three keys, one for each attribute.
+# For each attribute, make sure it's a known encoding.
+for attribute in ['unique', 'username', 'groups']:
+    try:
+        codecs.lookup(ConfigOption['ldap-encodings'][attribute])
+    except LookupError:
+        validation_error('ldap-encodings', attribute,
+            'Encoding "%s" (for attribute \'%s\') is not recognized.'
+            % (ConfigOption['ldap-encodings'][attribute], attribute)
+        )
 
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
