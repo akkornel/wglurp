@@ -54,6 +54,7 @@ class LDAPCallback(BaseCallback):
     username_encoding = None
     groups_encoding = None
 
+
     @classmethod
     def bind_complete(cls, ldap, cursor):
         """Called to mark a successful bind to the LDAP server.
