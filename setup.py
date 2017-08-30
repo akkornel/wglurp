@@ -89,7 +89,7 @@ setup(
     provides = ['stanford_wglurp'],
     entry_points = {
         'console_scripts': [
-            'wglurp-ldap = stanford_wglurp.ldap:main',
+            'wglurp-ldap = stanford_wglurp.ldap.main:main',
         ],
     },
     data_files = data_files,
