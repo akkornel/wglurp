@@ -201,6 +201,7 @@ def main():
     # Wait for the thread to end
     while client_thread.is_alive() is True:
         client_thread.join(timeout=5.0)
+    logger.info('LDAP client thread has exited!')
 
     # If metrics are running, signal them to stop.
     # Before closing, write out zeroes, to prevent fake stats being collected.
@@ -208,6 +209,8 @@ def main():
         logger.debug('Signaling metrics thread to exit.')
         metrics_event.set()
         metrics_thread.join()
+        logger.info('Metrics thread has exited!')
+        logger.debug('Doing final metrics write...')
         fcntl.lockf(metrics_file, fcntl.LOCK_EX)
         metrics_file.seek(0)
         metrics_file.truncate(0)
@@ -218,15 +221,17 @@ def main():
               'records.deleted=0',
                 sep="\n", file=metrics_file
         )
+        logger.debug('Flushing and closing metrics file.')
         metrics_file.flush()
         fsync(metrics_file.fileno())
         fcntl.lockf(metrics_file, fcntl.LOCK_UN)
         metrics_file.close()
 
     # Unbind, cleanup, and exit.
-    logger.debug('Unbinding & disconnecting from the LDAP server.')
+    logger.info('Unbinding & disconnecting from the LDAP server.')
     client.db_reconnect()
     client.unbind()
+    logger.info('Go Tree!')
     exit(0)
 
     # TODO: Handle join result
