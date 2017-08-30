@@ -294,8 +294,7 @@ class LDAPCallback(BaseCallback):
         groups_list = cursor.fetchall()
 
         # For each membership, remove the mapping and send a message.
-        for group_tuple in groups_list:
-            group = group_tuple[0]
+        for group in [group_tuple[0] for group_tuple in groups_list]:
             logger.info('Removing user %s (%s) from group %s'
                         % (member_info[0], member_info[1], group)
             )
