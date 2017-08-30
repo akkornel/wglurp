@@ -20,6 +20,7 @@ from syncrepl_client.callbacks import BaseCallback
 from sys import exit
 
 from ..config import ConfigBoolean, ConfigOption, parsed_ldap_url
+from .support import *
 
 # We also need threading, which might not be present.
 # This is our last import (whew!).
