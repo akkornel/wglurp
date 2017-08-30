@@ -82,3 +82,67 @@ def add_user_to_group(cursor, user_tuple, group_name, encoding):
 
     # All done!
     return None
+
+
+def remove_user_from_group(cursor, user_tuple, group_name, encoding=None):
+    """Remove a user from a group.
+
+    :param cursor: An active sqlite3 cursor.
+    :type cursor: sqlite3.Cursor
+
+    :param tuple user_tuple: A tuple containing unique ID and username.
+
+    :param group_name: The name of the group.
+    :type group_name: bytes or str
+
+    :param str encoding: The expected encoding for the group name, if group_name is bytes.
+
+    :returns: None
+
+    This method is a support method, used by some of the LDAP callbacks.  Given
+    a user tuple (userid and username), and a group name, this removes the user
+    from the group.  If the group_name is empty after this operation, it is
+    deleted.
+
+    .. note::
+
+        This code does database operations, but transaction management is left
+        to the caller.
+    """
+    # First, decode the group_name name to a string.
+    try:
+        if encoding is not None:
+            group_name = group_name.decode(encoding)
+    except UnicodeError:
+        logger.error('Could not decode group_name name "%s"; '
+                     'user %s (%s) is a member.  Skipping.'
+                     % (group_name,
+                        user_tuple[0]. user_tuple[1])
+        )
+        return None
+
+    # Log, and then delete.
+    logger.info('Removing user %s (%s) from group %s'
+                % (user_tuple[0], user_tuple[1], group_name)
+    )
+    cursor.execute('''
+        DELETE
+          FROM workgroup_members
+         WHERE workgroup_name = ?
+           AND member_id = ?
+    ''', (group_name, user_tuple[0]))
+
+    # Is the group empty now?  If yes, then delete it.
+    cursor.execute('''
+        SELECT COUNT(*)
+          FROM workgroup_members
+         WHERE workgroup_name = ?
+    ''', (group_name,))
+    membership_count = cursor.fetchone()
+    if membership_count[0] == 0:
+        logger.info('Group %s is now empty.' % group)
+        cursor.execute('''
+            DELETE
+              FROM workgroups
+             WHERE name = ?
+        ''', (group_name,))

@@ -295,31 +295,7 @@ class LDAPCallback(BaseCallback):
 
         # For each membership, remove the mapping and send a message.
         for group in [group_tuple[0] for group_tuple in groups_list]:
-            logger.info('Removing user %s (%s) from group %s'
-                        % (member_info[0], member_info[1], group)
-            )
-            cursor.execute('''
-                DELETE
-                  FROM workgroup_members
-                 WHERE workgroup_name = ?
-                   AND member_id = ?
-            ''', (group, member_info[0]))
-
-            # Is the group empty now?  If yes, then delete it.
-            cursor.execute('''
-                SELECT COUNT(*)
-                  FROM workgroup_members
-                 WHERE workgroup_name = ?
-            ''', (group,))
-            membership_count = cursor.fetchone()
-            if membership_count[0] == 0:
-                logger.info('Group %s is now empty.' % group)
-                cursor.execute('''
-                    DELETE
-                      FROM workgroups
-                     WHERE name = ?
-                ''', (group,))
-
+            remove_user_from_group(cursor, member_info, group)
             # TODO: Send "User removed from group" message.
 
         # Finally, delete the member entry entirely.
