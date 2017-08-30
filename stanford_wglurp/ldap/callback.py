@@ -396,133 +396,62 @@ class LDAPCallback(BaseCallback):
         cls.records_modified = cls.records_modified + 1
         cls.records_count_lock.release()
 
-        """
-        # Go through each of the user's member groups.
-        for group in groups:
-            # First, decode the group name to a string.
-            try:
-                group = group.decode(groups_encoding)
-            except UnicodeError:
-                logger.error('Could not decode group name "%s"; '
-                             'user %s (%s) is a member.  Skipping.'
-                             % (group,
-                                unique_username[0]. unique_username[1])
-                )
-                break
-
-            # Now, find out if the group already exists.
-            cursor.execute('''
-                SELECT COUNT(*)
-                  FROM workgroups
-                 WHERE name = ?
-            ''', (group,))
-            workgroup_count = cursor.fetchone()
-
-            # If the list doesn't exist, create it.
-            if workgroup_count[0] == 0:
-                logger.info('Discovered group %s' % group)
-                cursor.execute('''
-                    INSERT
-                      INTO workgroups
-                           (name)
-                    VALUES (?)
-                ''', (group,))
-
-            # Now we can add the user to the workgroup!
-            logger.debug('%s (%s) is a member of group %s'
-                         % (unique_username[0], unique_username[1], group)
-            )
-            cursor.execute('''
-                INSERT
-                  INTO workgroup_members
-                       (workgroup_name, member_id)
-                VALUES (?, ?)
-            ''', (group, unique_username[0]))
-
-            # Also, send a message about the group addition.
-            # NOTE: This is disabled if we are being called by refresh_done.
-            if send_message is True:
-                # TODO: Send "add" message.
-                cls.records_count_lock.acquire()
-                cls.records_added = cls.records_added + 1
-                cls.records_count_lock.release()
-                pass
-
-        # Start by getting the unique ID and username for this user.
-        # NOTE: If a DN change happened, the callback already took place.
+        # Get the user's _current_ user information.
+        # (It might change in a moment, though...)
         cursor.execute('''
             SELECT uniqueid, username
               FROM members
              WHERE dn = ?
         ''', (dn,))
-        member_info = cursor.fetchone()
-        if (member_info is None):
+        unique_username = cursor.fetchone()
+        if (unique_username is None):
             logger.error('Trying to change nonexistant DN "%s"' % dn)
             return
 
-        # First, let's check out group membership.
+        # Let's start by looking at old_groups and new_groups.
+        # We're going to be doing set stuff, so convert our lists.
+        try:
+            old_groups = set(old_attrs[cls.groups_attribute])
+        except KeyError:
+            old_groups = set()
+        try:
+            new_groups = set(new_attrs[cls.groups_attribute])
+        except KeyError:
+            logger.warning('User "%s" in not in any groups.' % dn)
+            new_groups = set()
 
-        # Get the user's current group membership.
-        cursor.execute('''
-            SELECT workgroup_name
-              FROM workgroup_members
-             WHERE member_id = ?
-        ''', (member_info[0],))
-        old_groups = cursor.fetchall()
+        # NOTE!!! We do not do any consitency checking right now, to see if
+        # old_groups matches what we have in the DB.
 
-        # Pull the new groups from the attributes
-        if groups_attribute not in new_attrs:
-            logger.warning('User %s (%s) is not in any groups.'
-                           % (member_info[0], member_info[1])
-            )
-            new_groups = list()
-        else:
-            new_groups = new_attrs[groups_attribute]
-
-        # Convert the list-of-tuples and list into sets
-        old_groups = set([group_tuple[0] for group_tuple in old_groups])
-        new_groups = set(new_groups)
-
-        # Now it's now really easy to work out the changes!
-
-        # Add groups
+        # Handle adding the user to groups, and removing the user from groups.
+        # Set math makes this easy!
         for added_group in new_groups - old_groups:
-            # TODO: Send "User added to group" message.
+            # Do the add, and send the message.
+            # (Our method handles decoding, and creating the group.)
+            # (It also does logging!)
+            add_user_to_group(
+                cursor,
+                unique_username,
+                added_group,
+                cls.groups_encoding
+            )
+            # TODO: Send message.
 
         # Remove groups
         for removed_group in old_groups - new_groups:
-            logger.info('Removing user %s (%s) from group %s'
-                        % (member_info[0], member_info[1], removed_group)
+            remove_user_from_group(
+                cursor,
+                unique_username,
+                removed_group,
+                cls.groups_encding
             )
-            cursor.execute('''
-                DELETE
-                  FROM workgroup_members
-                 WHERE workgroup_name = ?
-                   AND member_id = ?
-            ''', (removed_group, member_info[0]))
-
-            # Is the group empty now?  If yes, then delete it.
-            cursor.execute('''
-                SELECT COUNT(*)
-                  FROM workgroup_members
-                 WHERE workgroup_name = ?
-            ''', (removed_group,))
-            membership_count = cursor.fetchone()
-            if membership_count[0] == 0:
-                logger.info('Group %s is now empty.' % removed_group)
-                cursor.execute('''
-                    DELETE
-                      FROM workgroups
-                     WHERE name = ?
-                ''', (removed_group,))
-
-            # TODO: Send "User removed from group" message.
-
+            # TODO: Send message.
+        
         # Now that groups are in sync, check for a username or unique ID change.
-
+        # TODO: See above.
 
         # All done!
-        """
+
 
     @classmethod
     def record_change(cls, dn, old_attrs, new_attrs, cursor):
