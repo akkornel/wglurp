@@ -444,7 +444,7 @@ class LDAPCallback(BaseCallback):
                 cursor,
                 unique_username,
                 removed_group,
-                cls.groups_encding
+                cls.groups_encoding
             )
             # TODO: Send message.
         

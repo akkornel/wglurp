@@ -140,7 +140,7 @@ def remove_user_from_group(cursor, user_tuple, group_name, encoding=None):
     ''', (group_name,))
     membership_count = cursor.fetchone()
     if membership_count[0] == 0:
-        logger.info('Group %s is now empty.' % group)
+        logger.info('Group %s is now empty.' % group_name)
         cursor.execute('''
             DELETE
               FROM workgroups
