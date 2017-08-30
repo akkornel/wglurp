@@ -70,8 +70,8 @@ def add_user_to_group(cursor, user_tuple, group_name, encoding):
         ''', (group_name,))
 
     # Now we can add the user to the workgroup_name!
-    logger.debug('%s (%s) is a member of group_name %s'
-                 % (user_tuple[0], user_tuple[1], group_name)
+    logger.info('Adding user %s (%s) to group %s'
+                % (user_tuple[0], user_tuple[1], group_name)
     )
     cursor.execute('''
         INSERT
