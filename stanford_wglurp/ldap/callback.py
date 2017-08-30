@@ -368,6 +368,23 @@ class LDAPCallback(BaseCallback):
 
 
     @classmethod
+    def record_delete(cls, dn, cursor):
+        """Called to indicate the deletion of an LDAP record.
+
+        :param str dn: The DN of the deleted record.
+
+        :return: None - any returned value is ignored.
+
+        At the start, in the refresh phase, we don't do anything.
+        Later on, we do stuff!
+        """
+        logger.debug('Deleting record %s' % dn)
+        cls.records_count_lock.acquire()
+        cls.records_deleted = cls.records_deleted + 1
+        cls.records_count_lock.release()
+
+
+    @classmethod
     def record_rename_persist(cls, old_dn, new_dn, cursor):
         """Called to indicate the change of an LDAP record's DN.
 
@@ -416,23 +433,6 @@ class LDAPCallback(BaseCallback):
         """
         # No stats tracking; the change callback will handle that!
         pass
-
-
-    @classmethod
-    def record_delete(cls, dn, cursor):
-        """Called to indicate the deletion of an LDAP record.
-
-        :param str dn: The DN of the deleted record.
-
-        :return: None - any returned value is ignored.
-
-        At the start, in the refresh phase, we don't do anything.
-        Later on, we do stuff!
-        """
-        logger.debug('Deleting record %s' % dn)
-        cls.records_count_lock.acquire()
-        cls.records_deleted = cls.records_deleted + 1
-        cls.records_count_lock.release()
 
 
     @classmethod
