@@ -217,45 +217,13 @@ class LDAPCallback(BaseCallback):
 
         # Go through each of the user's member groups.
         for group in groups:
-            # First, decode the group name to a string.
-            try:
-                group = group.decode(cls.groups_encoding)
-            except UnicodeError:
-                logger.error('Could not decode group name "%s"; '
-                             'user %s (%s) is a member.  Skipping.'
-                             % (group,
-                                unique_username[0]. unique_username[1])
-                )
-                break
-
-            # Now, find out if the group already exists.
-            cursor.execute('''
-                SELECT COUNT(*)
-                  FROM workgroups
-                 WHERE name = ?
-            ''', (group,))
-            workgroup_count = cursor.fetchone()
-
-            # If the list doesn't exist, create it.
-            if workgroup_count[0] == 0:
-                logger.info('Discovered group %s' % group)
-                cursor.execute('''
-                    INSERT
-                      INTO workgroups
-                           (name)
-                    VALUES (?)
-                ''', (group,))
-
-            # Now we can add the user to the workgroup!
-            logger.debug('%s (%s) is a member of group %s'
-                         % (unique_username[0], unique_username[1], group)
+            # add_user_to_group is from .support
+            add_user_to_group(
+                cursor,
+                unique_username,
+                group,
+                cls.groups_encoding
             )
-            cursor.execute('''
-                INSERT
-                  INTO workgroup_members
-                       (workgroup_name, member_id)
-                VALUES (?, ?)
-            ''', (group, unique_username[0]))
 
             # Also, send a message about the group addition.
             # NOTE: This is disabled if we are being called by refresh_done.
