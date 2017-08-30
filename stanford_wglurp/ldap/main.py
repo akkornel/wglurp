@@ -132,7 +132,7 @@ def main():
                 data_path = ConfigOption['ldap']['data'],
                 callback  = LDAPCallback,
                 ldap_url  = parsed_ldap_url,
-                mode      = SyncreplMode.REFRESH_ONLY,
+                mode      = SyncreplMode.REFRESH_AND_PERSIST,
         )
         logger.debug('Connection complete!')
     except ldap.FILTER_ERROR:
@@ -168,6 +168,7 @@ def main():
     def stop_handler(signal, frame):
         logger.warning('LDAP client stop handler has been called.')
         logger.info('The received signal was %d' % signal)
+        logger.debug('Calling please_stop')
         client.please_stop()
 
     # Start our Syncrepl thread, and intercept signals.
