@@ -114,6 +114,16 @@ ConfigOption['ldap-encodings']['unique'] = 'ascii'
 ConfigOption['ldap-encodings']['username'] = 'ascii'
 ConfigOption['ldap-encodings']['groups'] = 'ascii'
 
+# Database options
+ConfigOption['db'] = {}
+ConfigOption['db']['host'] = ''
+ConfigOption['db']['port'] = '5432'
+ConfigOption['db']['database'] = ''
+
+ConfigOption['db-access'] = {}
+ConfigOption['db-access']['username'] = 'postgres'
+ConfigOption['db-access']['password'] = ''
+
 
 # Read in configuration files, if present.
 logger.debug('Reading configuration files...')
@@ -445,6 +455,40 @@ for attribute in ['unique', 'username', 'groups']:
             'Encoding "%s" (for attribute \'%s\') is not recognized.'
             % (ConfigOption['ldap-encodings'][attribute], attribute)
         )
+
+# Now check db.
+
+# host should be either a valid IP, or a valid hostname/FQDN.
+db_host=ConfigOption['db']['host']
+try:
+    IP(db_host)
+except:
+    try:
+        socket.gethostbyname(db_host)
+    except socket.gaierror:
+        validation_error('db', 'host',
+            '"%s" is either a bad IP, or an unresolveable hostname or FQDN.'
+            % db_host
+        )
+del(db_host)
+
+# Check port is a number in the right range.
+db_port=ConfigOption['db']['port']
+try:
+    db_port = int(db_port)
+    if db_port < 1 or db_port >= 65535:
+        validation_error('db', 'port',
+            'Port number "%s" is out of range.' % db_port
+        )
+except:
+    validation_error('db', 'port',
+        'Port "%s" is not a valid number.' % db_port
+    )
+del(db_port)
+
+# There are no real checks to do for the database name.
+
+# There are no real checks to do for the db-access items.
 
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
