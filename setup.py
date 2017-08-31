@@ -83,7 +83,9 @@ setup(
     python_requires = '>=3.3,<4',
     install_requires = [
         'IPy',
+        'psycopg2',
         'pyldap',
+        'SQLAlchemy>=1.1,<1.2',
         'syncrepl-client>=0.96',
     ],
     provides = ['stanford_wglurp'],
