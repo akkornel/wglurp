@@ -9,8 +9,8 @@
 # Python compiled code
 stanford_wglurp/__pycache__
 stanford_wglurp/*.pyc
-stanford_wglurp/ldap/__pycache__
-stanford_wglurp/ldap/*.pyc
+stanford_wglurp/*/__pycache__
+stanford_wglurp/*/*.pyc
 
 # Setuptools artifacts
 build
