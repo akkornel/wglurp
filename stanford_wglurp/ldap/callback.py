@@ -108,8 +108,10 @@ class LDAPCallback(BaseCallback):
         ''')
 
         # Start going through all of the users.
-        # Since this is the same as a single add, let's call that method.
-        # We cache 
+        # Since this is the same as a single record add, let's call that method.
+        # add_method is used so that we don't have to resolve 'cls......' in
+        # every iteration of the for loop.
+        # As this goes, we build a list of groups that have been created.
         logger.info('Building view of current workgroups...')
         add_method = cls.record_add_persist
         groups_created = set()
