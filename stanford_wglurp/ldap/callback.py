@@ -166,8 +166,8 @@ class LDAPCallback(BaseCallback):
             # In one operation, we access the attribute list (can throw
             # KeyError), access the first item (can throw IndexError), and
             # decode it (can throw UnicodeError).  Saves us alot of checks!
-            attribute_value_list = attrs[attribute_name]
             try:
+                attribute_value_list = attrs[attribute_name]
                 unique_username.append(
                     attribute_value_list[0].decode(attribute_encoding)
                 )
