@@ -46,16 +46,16 @@ def write_metrics(metrics_file, stats_class, finish_event):
         logger.debug('Metrics writer updating stats.')
         metrics_file.seek(0)
         metrics_file.truncate(0)
-        print('records.last_updated', round(time.time()),
+        print('ldap.records.last_updated', round(time.time()),
             sep='=', file=metrics_file
         )
-        print('records.added', stats_class.records_added,
+        print('ldap.records.added', stats_class.records_added,
             sep='=', file=metrics_file
         )
-        print('records.modified', stats_class.records_modified,
+        print('ldap.records.modified', stats_class.records_modified,
             sep='=', file=metrics_file
         )
-        print('records.deleted', stats_class.records_deleted,
+        print('ldap.records.deleted', stats_class.records_deleted,
             sep='=', file=metrics_file
         )
 
@@ -214,11 +214,11 @@ def main():
         fcntl.lockf(metrics_file, fcntl.LOCK_EX)
         metrics_file.seek(0)
         metrics_file.truncate(0)
-        print('records.last_updated', round(time.time()),
+        print('ldap.records.last_updated', round(time.time()),
             sep='=', file=metrics_file
         )
-        print('records.added=0', 'records.modified=0',
-              'records.deleted=0',
+        print('ldap.records.added=0', 'ldap.records.modified=0',
+              'ldap.records.deleted=0',
                 sep="\n", file=metrics_file
         )
         logger.debug('Flushing and closing metrics file.')
