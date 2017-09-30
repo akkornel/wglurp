@@ -173,20 +173,20 @@ class LDAPCallback(BaseCallback):
                 )
             except (KeyError, IndexError):
                 logger.warning('Entry "%s" is missing the required '
-                               '\'%s\' attribute!' % (user, attribute_name)
+                               '\'%s\' attribute!' % (dn, attribute_name)
                 )
                 break
             except UnicodeError as e:
                 logger.warning('Error %s decoding the \'%s\' of entry "%s": %s'
                                % (attribute_encoding, attribute_name,
-                                  user, str(e)
+                                  dn, str(e)
                                  )
                 )
                 break
             # Finally, catch if the attribute is multi-valued.
             if len(attribute_value_list) > 1:
                 logger.error('Entry "%s" has a multi-valued '
-                             '\'%s\' attribute!' % (user, attribute_name)
+                             '\'%s\' attribute!' % (dn, attribute_name)
                 )
                 break
 
