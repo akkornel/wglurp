@@ -194,8 +194,9 @@ class LDAPCallback(BaseCallback):
 
         # If we didn't run through the for() loop twice, skip this user.
         # (The error/warning would have been logged already.
-        if unique_username is None:
-            return 0
+        # NOTE: Return an empty list, since no groups were touched.
+        if len(unique_username) < 2:
+            return list()
 
         # Finally our uid and uname are known for this user!
         # Add them to the database.
