@@ -117,9 +117,9 @@ ConfigOption['ldap-encodings']['groups'] = 'ascii'
 
 # Database options
 ConfigOption['db'] = {}
-ConfigOption['db']['host'] = ''
+ConfigOption['db']['host'] = 'localhost'
 ConfigOption['db']['port'] = '5432'
-ConfigOption['db']['database'] = ''
+ConfigOption['db']['database'] = 'postgres'
 
 ConfigOption['db-access'] = {}
 ConfigOption['db-access']['username'] = 'postgres'
