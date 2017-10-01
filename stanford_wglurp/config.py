@@ -121,10 +121,16 @@ ConfigOption['db'] = {}
 ConfigOption['db']['host'] = 'localhost'
 ConfigOption['db']['port'] = '5432'
 ConfigOption['db']['database'] = 'postgres'
+ConfigOption['db']['capath'] = ''
 
 ConfigOption['db-access'] = {}
 ConfigOption['db-access']['username'] = 'postgres'
 ConfigOption['db-access']['password'] = ''
+
+ConfigOption['db-cert'] = {}
+ConfigOption['db-cert']['active'] = 'False'
+ConfigOption['db-cert']['certpath'] = ''
+ConfigOption['db-cert']['keypath'] = ''
 
 # Challenge option
 ConfigOption['challenge'] = {}
@@ -190,6 +196,8 @@ for section, option in [
     ('general', 'systemd'),
     ('metrics', 'active'),
     ('ldap', 'starttls'),
+    ('db-cert', 'active'),
+
 ]:
     try:
         # Parse the boolean value, then store it into a dict for later access.
@@ -508,7 +516,74 @@ del(db_port)
 
 # There are no real checks to do for the database name.
 
+# For capath, make sure it's a valid CA.
+if ConfigOption['db']['capath'] != '':
+    try:
+        import ssl
+    except ImportError:
+        validation_error('db', 'capath',
+            'The ssl module is not available.'
+        )
+    ssl_context = ssl.SSLContext()
+
+    # Try loading the CA cert.
+    try:
+        ssl_context.load_verify_locations(cafile=ConfigOption['db']['capath'])
+    except (FileNotFoundError, PermissionError):
+        validation_error('db', 'capath',
+            'The file "%s" could not be found, or could not be read.'
+            % (ConfigOption['db']['capath'],)
+        )
+    except ssl.SSLError:
+        validation_error('db', 'capath',
+            'The file "%s" was not recognized as a certificate.'
+            % (ConfigOption['db']['capath'],)
+        )
+
+    # See if we recognized it as a CA cert.
+    if ssl_context.cert_store_stats()['x509_ca'] == 0:
+        validation_error('db', 'capath',
+            'The file "%s" was parsed, but did not contain a CA certificate.'
+            % (ConfigOption['db']['capath'],)
+        )
+    del(ssl_context)
+
 # There are no real checks to do for the db-access items.
+
+# Now check db-cert
+
+# We only do checks if this section is active.
+if ConfigBoolean['db-cert']['active'] is True:
+    try:
+        import ssl
+    except ImportError:
+        validation_error('db-cert', 'active',
+            'The ssl module is not available.'
+        )
+    ssl_context = ssl.SSLContext()
+
+    # Check certpath and keypath.
+    try:
+        ssl_context.load_cert_chain(ConfigOption['db-cert']['certpath'])
+    except (FileNotFoundError, PermissionError):
+        validation_error('db', 'certpath',
+            'The file "%s" could not be found, or could not be read.'
+            % (ConfigOption['db']['certpath'],)
+        )
+    except ssl.SSLError:
+        validation_error('db', 'certpath',
+            'The file "%s" was not recognized as a certificate.'
+        )
+
+# Now that we've checked the db stuff, try to connect to the database!
+try:
+    from .db.engine import DB
+    with DB.begin(close_with_result=True) as conn:
+        conn.execute('SELECT 1')
+except Exception as e:
+    validation_error('db', 'host',
+                     'Unable to connect to database: %s' % e
+    )
 
 # Now check challenge
 
