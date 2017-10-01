@@ -14,9 +14,23 @@ import psycopg2
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
-from ..config import ConfigOption
+from ..config import ConfigBoolean, ConfigOption
 from . import schema
 
+
+# Add Postgres-specific settings.
+# First, require SSL from the server.
+db_options = dict()
+db_options['sslmode'] = 'require'
+
+# If a CA is provided, add it to the configuration.
+if ConfigOption['db']['capath'] != '':
+    db_options['sslrootcert'] = ConfigOption['db-cert']['capath']
+
+# If we are using client cert authentication, then add our client key and cert.
+if ConfigBoolean['db-cert']['active'] is True:
+    db_options['sslcert'] = ConfigOption['db-cert']['certpath']
+    db_options['sslkey'] = ConfigOption['db-cert']['keypath']
 
 # Construct our databse URL.
 # ConfigOption can't hold non-strings, so we need to convert empty strings to
@@ -35,7 +49,9 @@ db_url = URL('postgresql',
                 else ConfigOption['db-access']['username']),
 
     password = (None if ConfigOption['db-access']['password'] == ''
-                else ConfigOption['db-access']['password'])
+                else ConfigOption['db-access']['password']),
+
+    query = db_options
 )
 
 
