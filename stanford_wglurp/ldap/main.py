@@ -24,8 +24,8 @@ from sys import exit
 import threading
 import time
 
-from ..config import ConfigBoolean, ConfigOption, parsed_ldap_url
 from .callback import LDAPCallback
+from ..config import ConfigBoolean, ConfigOption, parsed_ldap_url
 
 
 #
