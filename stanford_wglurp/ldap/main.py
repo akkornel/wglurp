@@ -26,6 +26,7 @@ import time
 
 from .callback import LDAPCallback
 from ..config import ConfigBoolean, ConfigOption, parsed_ldap_url
+from ..db import engine
 
 
 #
@@ -103,6 +104,9 @@ def main():
             logger.critical('--> %s' % e)
             exit(1)
         fcntl.lockf(metrics_file, fcntl.LOCK_SH)
+
+    # Get a database session
+    LDAPCallback.db_session = engine.Session()
 
     # Store the LDAP attribute names in the callback.
     LDAPCallback.unique_attribute = ConfigOption['ldap-attributes']['unique']
@@ -228,6 +232,8 @@ def main():
         metrics_file.close()
 
     # Unbind, cleanup, and exit.
+    logger.info('Ending database session.')
+    LDAPCallback.db_session.close()
     logger.info('Unbinding & disconnecting from the LDAP server.')
     client.db_reconnect()
     client.unbind()
