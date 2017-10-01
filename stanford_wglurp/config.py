@@ -92,6 +92,7 @@ ConfigOption['metrics']['path'] = ''
 
 # LDAP options
 ConfigOption['ldap'] = {}
+ConfigOption['ldap']['workers'] = ''
 ConfigOption['ldap']['data'] = '/var/lib/wglurp/ldap-'
 ConfigOption['ldap']['url'] = 'ldaps://ldap.stanford.edu:636'
 ConfigOption['ldap']['starttls'] = 'False'
@@ -290,7 +291,20 @@ if (
 
 # LDAP validation (including ldap-simple and ldap-attributes)!
 
-# First check data.
+# Make sure workers is a positive number.
+try:
+    int(ConfigOption['ldap']['workers'])
+except ValueError:
+    validation_error('ldap', 'workers',
+                     'Value "%s" is not an integer' % ConfigOption['ldap']['workers']
+    )
+    ConfigOption['ldap']['workers'] = '3'
+if int(ConfigOption['ldap']['workers']) <= 0:
+    validation_error('ldap', 'workers',
+                     'Value is not a positive number'
+    )
+
+# Now check data.
 ldap_dir = path.dirname(ConfigOption['ldap']['data'])
 if not path.isdir(ldap_dir):
     validation_error('ldap', 'data',
