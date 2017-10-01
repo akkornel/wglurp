@@ -29,7 +29,7 @@ def add_user_to_group(cursor, user_tuple, group_name, encoding):
 
     :param str encoding: The expected encoding for the group name.
 
-    :returns: None
+    :returns: The group name, as a string.
 
     This method is a support method, used by some of the LDAP callbacks.  Given
     a user tuple (userid and username), and a group name, this adds the user to
@@ -80,8 +80,8 @@ def add_user_to_group(cursor, user_tuple, group_name, encoding):
         VALUES (?, ?)
     ''', (group_name, user_tuple[0]))
 
-    # All done!
-    return None
+    # All done!  Return the group name as a proper string.
+    return group_name
 
 
 def remove_user_from_group(cursor, user_tuple, group_name, encoding=None):
@@ -97,7 +97,7 @@ def remove_user_from_group(cursor, user_tuple, group_name, encoding=None):
 
     :param str encoding: The expected encoding for the group name, if group_name is bytes.
 
-    :returns: None
+    :returns: The group name, as a string.
 
     This method is a support method, used by some of the LDAP callbacks.  Given
     a user tuple (userid and username), and a group name, this removes the user
@@ -146,3 +146,6 @@ def remove_user_from_group(cursor, user_tuple, group_name, encoding=None):
               FROM workgroups
              WHERE name = ?
         ''', (group_name,))
+
+    # All done!  Return the group name as a proper string.
+    return group_name
