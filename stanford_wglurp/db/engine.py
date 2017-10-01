@@ -13,6 +13,7 @@ from .. import logging
 import psycopg2
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
+from sqlalchemy.orm import sessionmaker
 
 from ..config import ConfigBoolean, ConfigOption
 from . import schema
@@ -56,4 +57,8 @@ db_url = URL('postgresql',
 
 
 # Create an Engine for our URL.
-db = create_engine(db_url)
+DB = create_engine(db_url)
+
+# Create a session factory, bound to our engine.
+Session = sessionmaker(bind=DB)
+AutoCommitSession = sessionmaker(bind=DB, autocommit=True)
