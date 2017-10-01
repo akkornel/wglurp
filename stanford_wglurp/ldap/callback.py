@@ -20,6 +20,7 @@ from syncrepl_client.callbacks import BaseCallback
 from sys import exit
 
 from ..config import ConfigBoolean, ConfigOption, parsed_ldap_url
+from ..db import changes, engine, schema
 from .support import *
 
 # We also need threading, which might not be present.
@@ -53,6 +54,9 @@ class LDAPCallback(BaseCallback):
     unique_encoding = None
     username_encoding = None
     groups_encoding = None
+
+    # Placeholder for the DB session
+    db_session = None
 
 
     @classmethod
@@ -127,7 +131,34 @@ class LDAPCallback(BaseCallback):
 
         # The commit will happen as soon as the callback ends!
 
-        # TODO: Send sync messages.
+        # Send a sync message for each group created.
+        db_session = engine.AutoCommitSession()
+        for group_name in groups_created:
+            logger.info('Syncing membership for group %s' % group_name)
+
+            # Get the membership of the group
+            cursor.execute('''
+                    SELECT members.uniqueid,
+                           members.username
+                      FROM workgroup_members
+                INNER JOIN members
+                        ON members.uniqueid = workgroup_members.member_id
+                 WHERE workgroup_members.workgroup_name = ?
+            ''', (group_name,))
+
+            # Construct the change entry using what we got.
+            db_entry = changes.ChangeEntry(
+                action = 'SYNC',
+                group = group_name,
+                members = cursor.fetchall(),
+            )
+            db_entry.add(db_session)
+            db_session.flush()
+
+        # Log completion, and close the session.
+        logger.info('Sync changes uploaded!')
+        db_session.close()
+
 
         # Now we can start doing stuff when an event comes in!
         logger.debug('Monkey-patching add, delete, and change records...')
