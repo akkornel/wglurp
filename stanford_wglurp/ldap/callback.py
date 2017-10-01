@@ -200,15 +200,22 @@ class LDAPCallback(BaseCallback):
 
         # Finally our uid and uname are known for this user!
         # Add them to the database.
+        # If the add fails, abort the entire operation.
         logger.debug('DN "%s"\'s unique ID / username is %s / %s'
                      % (dn, unique_username[0], unique_username[1])
         )
-        cursor.execute('''
-            INSERT
-              INTO members
-                  (dn, uniqueid, username)
-            VALUES (?, ?, ?)
-        ''', (dn, unique_username[0], unique_username[1]))
+        try:
+            cursor.execute('''
+                INSERT
+                  INTO members
+                      (dn, uniqueid, username)
+                VALUES (?, ?, ?)
+            ''', (dn, unique_username[0], unique_username[1]))
+        except sqlite3.Error as e:
+            logger.error('Database problem attempting to add '
+                         'DN/unique ID/username "%s"/"%s"/"%s" to members: %s'
+                         % (dn, unique_username[0], unique_username[1], e))
+            return list()
 
         # Our multivalued attribute is allowed to be missing/empty
         if cls.groups_attribute not in attrs:
