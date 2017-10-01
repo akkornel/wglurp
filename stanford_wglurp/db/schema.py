@@ -14,6 +14,7 @@ from sqlalchemy import (BigInteger, Column, Enum, Index, Integer,
                         SmallInteger, String, Sequence)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 BaseTable = declarative_base()
 
