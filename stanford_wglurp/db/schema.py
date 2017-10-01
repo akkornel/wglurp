@@ -184,3 +184,43 @@ class SQSDestinations(BaseTable):
         String,
         nullable = False
     )
+
+
+class Updates(BaseTable):
+    """The updates which are waiting to go out.
+
+    This table is a queue of updates, which are waiting to go out to various
+    destination.
+
+    This queue only contains updates for active destinations.  Destinations
+    which are DEFERRED will have their updates in a separate queue.
+    Destinations which are DISABLED won't have updates in this queue at all.
+    """
+    __tablename__ = 'updates'
+
+    # The unique ID of the queue entry.  The closer this entry is to the head
+    # of a worker's queue, the lower the value.
+    id = Column(
+        BigInteger,
+        Sequence('updates_id_sequence'),
+        primary_key = True
+    )
+
+    # The unique ID of the destination.
+    destination_id = Column(
+        Integer,
+        ForeignKey('destinations.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+
+    # A reference back to the parent Destination row.
+    destination = relationship('Destinations')
+
+    # The message to pass to the destination.
+    message = Column(
+        JSON,
+        nullable = False
+    )
+
+
+# Create an index on the worker ID and change ID.
+Index('updates_destination_id_idx', Updates.destination_id, Updates.id)
