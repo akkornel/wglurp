@@ -10,7 +10,7 @@
 # Logging must always be loaded first!
 from .. import logging
 
-from sqlalchemy import (BigInteger, Binary, Column, Enum, ForeignKey,
+from sqlalchemy import (BigInteger, Binary, Column, DateTime, Enum, ForeignKey,
                         Index, Integer, SmallInteger, String, Sequence)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
@@ -119,6 +119,50 @@ class Destinations(BaseTable):
             length=32
         ),
         nullable = False
+    )
+
+
+class Challenges(BaseTable):
+    __tablename__ = 'challenges'
+
+    # The unique ID of the challenge.
+    id = Column(
+        BigInteger,
+        Sequence('challenge_sequence'),
+        primary_key = True
+    )
+
+    # The unique ID of the destination.
+    destination_id = Column(
+        Integer,
+        ForeignKey('destinations.id', onupdate='CASCADE', ondelete='CASCADE'),
+        nullable = False
+    )
+
+    # A reference back to the parent Destination row.
+    destination = relationship('Destinations')
+
+    # A 256-bit (32-byte) nonce, to prevent DoS attacks.
+    nonce = Column(
+        Binary(
+            length = 32
+        ),
+        nullable = False
+    )
+
+    # The 512-bit (64-byte) challenge value.
+    challenge = Column(
+        Binary(
+            length = 64
+        ),
+        nullable = False
+    )
+
+    # The challenge expiration date & time.
+    expiration = Column(
+        DateTime,
+        nullable = False,
+        index = True
     )
 
 
