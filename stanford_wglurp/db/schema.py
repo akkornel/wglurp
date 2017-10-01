@@ -10,8 +10,8 @@
 # Logging must always be loaded first!
 from .. import logging
 
-from sqlalchemy import (BigInteger, Column, Enum, Index, Integer,
-                        SmallInteger, String, Sequence)
+from sqlalchemy import (BigInteger, Binary, Column, Enum, Index,
+                        Integer, SmallInteger, String, Sequence)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -78,3 +78,45 @@ class Changes(BaseTable):
 
 # Create an index on the worker ID and change ID.
 Index('changes_worker_id_idx', Changes.worker, Changes.id)
+
+
+class Destinations(BaseTable):
+    __tablename__ = 'destinations'
+
+    # The unique ID of the destination.
+    id = Column(
+        Integer,
+        Sequence('destination_sequence'),
+        primary_key = True
+    )
+
+    # The status of the destination.  Can be...
+    # * ACTIVE: This destination is receiving messages.
+    # * DEFERRED: All messages to this destination are queued.
+    # * DISABLED: All messages to this destination are silently discarded.
+    status = Column(
+        Enum(
+            'ACTIVE',
+            'DEFER',
+            'DISABLE',
+            name = 'destinations_status_enum',
+        ),
+        nullable = False,
+        index = True
+    )
+
+    # The reason why the destination is in DEFER or DISABLE state.
+    reason = Column(
+        String
+    )
+
+    # A 256-bit (32-byte) random value, which—when mixed with the challenge
+    # base key—forms the key used for all challenges.
+    # NOTE: Not all destinations use challenges, and so in some cases this
+    # won't be used.
+    challenge_seed = Column(
+        Binary(
+            length=32
+        ),
+        nullable = False
+    )
