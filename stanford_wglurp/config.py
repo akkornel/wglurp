@@ -17,6 +17,7 @@ if 'stanford_wglurp.logging' not in sys.modules:
 # (Except for sys, which was imported so we could do our import check.)
 import codecs
 import configparser
+import dateutil.parser
 from glob import glob
 from IPy import IP
 import ldapurl
@@ -124,6 +125,11 @@ ConfigOption['db']['database'] = 'postgres'
 ConfigOption['db-access'] = {}
 ConfigOption['db-access']['username'] = 'postgres'
 ConfigOption['db-access']['password'] = ''
+
+# Challenge option
+ConfigOption['challenge'] = {}
+ConfigOption['challenge']['master-seed'] = ''
+ConfigOption['challenge']['last-rotated'] = ''
 
 
 # Read in configuration files, if present.
@@ -503,6 +509,38 @@ del(db_port)
 # There are no real checks to do for the database name.
 
 # There are no real checks to do for the db-access items.
+
+# Now check challenge
+
+# Make sure the master seed is 64 hex characters
+# This works well to generate (run it twice):
+# dd if=/dev/random bs=64 count=1 | openssl sha -sha256 -hex
+seed_length = len(ConfigOption['challenge']['master-seed'])
+try:
+    seed_length = len(bytes.fromhex(
+        ConfigOption['challenge']['master-seed']
+    ))
+except ValueError:
+    validation_error('challenge', 'master-seed',
+                     'Not a hex string'
+    )
+if seed_length != 64:
+    validation_error('challenge', 'master-seed',
+                     'Hex string is not 64 bytes (512 bits), it is %d' % seed_length
+    )
+del seed_length
+
+# Make sure last-rotated is parseable
+# (`date -u -R` works well on macOS to produce a parseable string)
+try:
+    dateutil.parser.parse(
+        ConfigOption['challenge']['last-rotated']
+    )
+except ValueError as e:
+    validation_error('challenge', 'last-rotated',
+                     'Unable to parse string: "%s"' % e
+    )
+
 
 # At the very end, if any part of the validation did not pass, exit.
 if ValidationResult.validation_passed is False:
