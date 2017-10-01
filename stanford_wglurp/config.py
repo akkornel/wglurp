@@ -137,6 +137,12 @@ ConfigOption['challenge'] = {}
 ConfigOption['challenge']['master-seed'] = ''
 ConfigOption['challenge']['last-rotated'] = ''
 
+# AWS option
+ConfigOption['aws'] = {}
+ConfigOption['aws']['active'] = 'False'
+ConfigOption['aws']['access-key'] = ''
+ConfigOption['aws']['secret-key'] = ''
+
 
 # Read in configuration files, if present.
 logger.debug('Reading configuration files...')
@@ -197,6 +203,7 @@ for section, option in [
     ('metrics', 'active'),
     ('ldap', 'starttls'),
     ('db-cert', 'active'),
+    ('aws', 'active'),
 
 ]:
     try:
@@ -615,6 +622,24 @@ except ValueError as e:
     validation_error('challenge', 'last-rotated',
                      'Unable to parse string: "%s"' % e
     )
+
+# Now check aws
+
+# We only check stuff if it's active.
+if ConfigBoolean['aws']['active'] is True:
+    try:
+        import botocore
+        import boto3
+        session = boto3.session.Session(
+            aws_access_key_id = ConfigOption['aws']['access-key'],
+            aws_secret_access_key = ConfigOption['aws']['secret-key'],
+            region_name = 'us-west-1',
+        )
+        account = session.client('sts').get_caller_identity()['Account']
+    except botocore.exceptions.ClientError as e:
+        validation_error('aws', 'access-key',
+                         'Credentials are invalid: %s' % e
+        )
 
 
 # At the very end, if any part of the validation did not pass, exit.
