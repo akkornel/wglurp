@@ -226,15 +226,21 @@ class LDAPCallback(BaseCallback):
         else:
             groups = attrs[cls.groups_attribute]
 
-        # Go through each of the user's member groups.
+        # Go through each of the user's member groups, while tracking the
+        # groups they were actually added to.
+        actual_groups = list()
         for group in groups:
+            # Decode the group name
+
             # add_user_to_group is from .support
-            add_user_to_group(
+            # We either get a group name as a string here, or None if the add failed.
+            actual_group = add_user_to_group(
                 cursor,
                 unique_username,
                 group,
                 cls.groups_encoding
             )
+            actual_groups.append(actual_group)
 
             # Also, send a message about the group addition.
             # NOTE: This is disabled if we are being called by refresh_done.
@@ -246,7 +252,7 @@ class LDAPCallback(BaseCallback):
                 pass
 
         # Syncrepl will handle committing, once the callback ends!
-        return groups
+        return actual_groups
 
 
     @classmethod
@@ -440,23 +446,27 @@ class LDAPCallback(BaseCallback):
             # Do the add, and send the message.
             # (Our method handles decoding, and creating the group.)
             # (It also does logging!)
-            add_user_to_group(
+            actual_group = add_user_to_group(
                 cursor,
                 unique_username,
                 added_group,
                 cls.groups_encoding
             )
-            # TODO: Send message.
+            if actual_group is not None:
+                # TODO: Send message.
+                pass
 
         # Remove groups
         for removed_group in old_groups - new_groups:
-            remove_user_from_group(
+            actual_group = remove_user_from_group(
                 cursor,
                 unique_username,
                 removed_group,
                 cls.groups_encoding
             )
-            # TODO: Send message.
+            if actual_group is not None:
+                # TODO: Send message.
+                pass
         
         # Now that groups are in sync, check for a username or unique ID change.
         # TODO: See above.
