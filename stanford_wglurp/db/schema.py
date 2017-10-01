@@ -10,8 +10,8 @@
 # Logging must always be loaded first!
 from .. import logging
 
-from sqlalchemy import (BigInteger, Binary, Column, Enum, Index,
-                        Integer, SmallInteger, String, Sequence)
+from sqlalchemy import (BigInteger, Binary, Column, Enum, ForeignKey,
+                        Index, Integer, SmallInteger, String, Sequence)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -118,5 +118,25 @@ class Destinations(BaseTable):
         Binary(
             length=32
         ),
+        nullable = False
+    )
+
+
+class SQSDestinations(BaseTable):
+    __tablename__ = 'destinations_sqs'
+
+    # The unique ID of the parent Destination row.
+    id = Column(
+        Integer,
+        ForeignKey('destinations.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key = True
+    )
+
+    # A reference back to the parent Destination row.
+    destination = relationship('Destinations')
+
+    # The SQS URL.
+    url = Column(
+        String,
         nullable = False
     )
