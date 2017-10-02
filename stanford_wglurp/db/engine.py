@@ -58,7 +58,8 @@ db_url = URL('postgresql',
 
 # Create an Engine for our URL.
 DB = create_engine(db_url)
+DBAC = create_engine(db_url, isolation_level='AUTOCOMMIT')
 
 # Create a session factory, bound to our engine.
 Session = sessionmaker(bind=DB)
-AutoCommitSession = sessionmaker(bind=DB, autocommit=True)
+AutoCommitSession = sessionmaker(bind=DBAC, autocommit=True)
