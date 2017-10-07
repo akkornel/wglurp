@@ -15,8 +15,24 @@ from sqlalchemy import (BigInteger, Binary, Column, DateTime, Enum, ForeignKey,
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.schema import MetaData
 
-BaseTable = declarative_base()
+# Create our common metadata.  We do this because we set our own naming
+# convention.  We'll give this to our base class momentarily!
+# NOTE: Multi-column indexes must still be named explicitly, along with things
+# like ENUMs.
+BaseTableMetaData = MetaData(
+    naming_convention={
+        'pk': '%(table_name)s_pk',
+        'ix': '%(table_name)s_%(column_0_name)s_idx',
+        'uq': '%(table_name)s_%(column_0_name)s_uidx',
+        'ck': '%(table_name)s_ck_%(constraint_name)s',
+        'fk': '%(table_name)s_%(column_0_name)s_fk_%(referred_table_name)s_%(referred_column_0_name)s',
+    },
+)
+
+# Create our declarative base class, using our prepared MetaData.
+BaseTable = declarative_base(metadata=BaseTableMetaData)
 
 
 class Changes(BaseTable):
