@@ -7,6 +7,10 @@
 .*.swp
 
 # Python compiled code
+alembic/__pycache__
+alembic/*.pyc
+alembic/versions/__pycache__
+alembic/versions/*.pyc
 stanford_wglurp/__pycache__
 stanford_wglurp/*.pyc
 stanford_wglurp/*/__pycache__

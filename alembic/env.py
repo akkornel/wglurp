@@ -13,9 +13,9 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+import stanford_wglurp.logging
+from stanford_wglurp.db import engine, schema
+target_metadata = schema.BaseTable.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -35,7 +35,7 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = engine.db_url
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True)
 
@@ -50,10 +50,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix='sqlalchemy.',
-        poolclass=pool.NullPool)
+    connectable = engine.DB
 
     with connectable.connect() as connection:
         context.configure(
