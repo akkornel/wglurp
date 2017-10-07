@@ -45,9 +45,13 @@ class Changes(BaseTable):
 
     # The unique ID of the queue entry.  The closer this entry is to the head
     # of a worker's queue, the lower the value.
+    changes_id_seq = Sequence('changes_id_seq',
+        metadata=BaseTable.metadata,
+    )
     id = Column(
         BigInteger,
-        Sequence('changes_id_sequence'),
+        changes_id_seq,
+        server_default=changes_id_seq.next_value(),
         primary_key = True
     )
 
@@ -100,9 +104,13 @@ class Destinations(BaseTable):
     __tablename__ = 'destinations'
 
     # The unique ID of the destination.
+    destinations_id_seq = Sequence('destinations_id_seq',
+        metadata=BaseTable.metadata,
+    )
     id = Column(
         Integer,
-        Sequence('destination_sequence'),
+        destinations_id_seq,
+        server_default=destinations_id_seq.next_value(),
         primary_key = True
     )
 
@@ -142,9 +150,13 @@ class Challenges(BaseTable):
     __tablename__ = 'challenges'
 
     # The unique ID of the challenge.
+    challenges_id_seq = Sequence('challenges_id_seq',
+        metadata=BaseTable.metadata,
+    )
     id = Column(
         BigInteger,
-        Sequence('challenge_sequence'),
+        challenges_id_seq,
+        server_default=challenges_id_seq.next_value(),
         primary_key = True
     )
 
@@ -216,9 +228,13 @@ class Updates(BaseTable):
 
     # The unique ID of the queue entry.  The closer this entry is to the head
     # of a worker's queue, the lower the value.
+    updates_id_seq = Sequence('updates_id_seq',
+        metadata=BaseTable.metadata,
+    )
     id = Column(
         BigInteger,
-        Sequence('updates_id_sequence'),
+        updates_id_seq,
+        server_default = updates_id_seq.next_value(),
         primary_key = True
     )
 
