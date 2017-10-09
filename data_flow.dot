@@ -2,13 +2,20 @@ digraph FLOW {
 
     "LDAP" [shape=box];
 
-    "syncrepl Client";
+    { rank=same;
+      "syncrepl Client";
+      "Record Pivot";
+    }
 
-    "Record Pivot";
+    { rank=same;
+      "Workgroup Queue" [shape=polygon, sides=4, distortion=0.8];
+      "List Storage" [shape=polygon, sides=4, distortion=0.8];
+    }
 
-    "Workgroup Queue" [shape=polygon, sides=4, distortion=0.8];
-
-    "Expander";
+    { rank=same;
+      "Expander";
+      "List Manager";
+    }
 
     "Change Queue" [shape=polygon, sides=4, distortion=0.8];
 
@@ -35,16 +42,24 @@ digraph FLOW {
     "Workgroup Queue" -> "Expander" [label="Workgroup Changes"];
 
     "Expander" -> "Change Queue" [label="Change Notifications"];
+    "Expander" -> "List Manager" [style=dotted, label="Member Lists"];
+
+    "List Manager" -> "List Storage" [dir=both];
 
     "Change Queue" -> "remctl Notifier";
     "Change Queue" -> "SQS Notifier";
     "Change Queue" -> "SNS Notifier";
     "Change Queue" -> "Webhook Notifier";
-    "Change Queue" -> "Websocket Server" [dir=both];
+    "Change Queue" -> "Websocket Server";
 
     "remctl Notifier" -> "Servers" [style=bold];
     "SQS Notifier" -> "AWS SQS" [style=bold];
     "SNS Notifier" -> "AWS SNS" [style=bold];
     "Webhook Notifier" -> "Servers" [style=bold];
-    "Websocket Server" -> "Servers" [style=bold, dir=back];
+    "Websocket Server" -> "Servers" [style=bold];
+
+    "AWS SNS" -> "Servers" [style=bold];
+    "AWS SQS" -> "Servers" [style=bold];
+
+    "Servers" -> "List Manager" [style=bold, dir=back];
 }
