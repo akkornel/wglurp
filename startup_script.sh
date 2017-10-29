@@ -14,10 +14,12 @@ GIT_TAG=bootstrap_gcp-latest
 SLACK_URL=$(curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/SLACK_URL)
 curl -X POST --data-urlencode 'payload={"text": "Builder bootstrap early script running!"}' ${SLACK_URL}
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y git gnupg gnupg-curl
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl git gnupg gnupg-curl
 gpg --recv-keys ${TRUSTED_KEYS[@]}
 for key in ${TRUSTED_KEYS[@]}; do
-    gpg --edit-key $key trust 5 save
+    echo "${key}:6:" | gpg --import-ownertrust
+done
+gpg --batch --update-trustdb
 git clone ${GIT_REPO} /root/bootstrap
 cd /root/bootstrap
 git tag -v ${GIT_TAG}
