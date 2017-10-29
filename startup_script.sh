@@ -15,7 +15,7 @@ SLACK_URL=$(curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/co
 curl -X POST --data-urlencode 'payload={"text": "Builder bootstrap early script running!"}' ${SLACK_URL}
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y curl git gnupg gnupg-curl
-gpg --recv-keys ${TRUSTED_KEYS[@]}
+gpg --keyserver hkp://keys.gnupg.net --recv-keys ${TRUSTED_KEYS[@]}
 for key in ${TRUSTED_KEYS[@]}; do
     echo "${key}:6:" | gpg --import-ownertrust
 done
