@@ -11,6 +11,8 @@ GIT_REPO=https://github.com/akkornel/wglurp.git
 GIT_TAG=bootstrap_gcp-latest
 
 # Do the bootstrap
+SLACK_URL=$(curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/SLACK_URL)
+curl -X POST --data-urlencode 'payload={"text": "Builder bootstrap early script running!"}' ${SLACK_URL}
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y git gnupg gnupg-curl
 gpg --recv-keys ${TRUSTED_KEYS[@]}
