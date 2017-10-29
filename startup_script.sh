@@ -23,5 +23,5 @@ gpg --batch --update-trustdb
 git clone ${GIT_REPO} /root/bootstrap
 cd /root/bootstrap
 git tag -v ${GIT_TAG}
-git checkout ${GIT_TAG}
+git checkout -q ${GIT_TAG}
 exec /root/bootstrap/bootstrap.sh
