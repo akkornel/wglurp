@@ -214,6 +214,69 @@ class SQSDestinations(BaseTable):
     )
 
 
+class Subscriptions(BaseTable):
+    """The groups (and group prefixes) we are watching for.
+
+    This table is a list of subscriptions.  Each subscription has a string, a
+    type, and a destination.
+
+    The string is either the exact name of the group to monitor for changes, or
+    a prefix (such that any group matching that prefix is monitored for
+    changes).  Each subscription has a destination of some sort.
+    """
+    __tablename__ = 'subscriptions'
+
+    # The unique ID of the subscription.
+    subscriptions_id_seq = Sequence('subscriptions_id_seq',
+        metadata=BaseTable.metadata
+    )
+    id = Column(
+        BigInteger,
+        subscriptions_id_seq,
+        server_default = subscriptions_id_seq.next_value(),
+        primary_key = True
+    )
+
+    # The subscription name or prefix
+    string = Column(
+        String,
+        nullable = False
+    )
+
+    type = Column(
+        Enum(
+            'PREFIX',
+            'SINGLE',
+            name='subscriptions_type_enum',
+        ),
+        nullable = False
+    )
+
+    # The ID of the destination.
+    # NOTE: We effectively have an index on this column, thanks to
+    # subscriptions_destination_string_type_uidx.
+    destination_id = Column(
+        Integer,
+        ForeignKey('destinations.id', onupdate='CASCADE', ondelete='CASCADE'),
+        nullable = False,
+    )
+
+    # A reference back to the parent Destination row.
+    destination = relationship('Destinations')
+
+# Make sure no destination can have more than one of exactly the same
+# description.
+Index('subscriptions_destination_string_type_uidx',
+    Subscriptions.destination_id, Subscriptions.string, Subscriptions.type,
+    unique=True
+)
+
+# Make an index on type and string, for searching.
+Index('subscriptions_type_string_idx',
+    Subscriptions.type, Subscriptions.string,
+)
+
+
 class Updates(BaseTable):
     """The updates which are waiting to go out.
 
