@@ -37,5 +37,5 @@ git tag -v ${GIT_TAG}
 git checkout -q ${GIT_TAG}
 
 # Notify and hand off to the actual bootstrap script
-curl -X POST --data-urlencode 'payload={"text": "Builder early bootstrap handing off…"}' ${SLACK_URL}
+curl -X POST --data-urlencode 'payload={"text": "Builder early bootstrap handing off..."}' ${SLACK_URL}
 exec /root/bootstrap/bootstrap.sh
