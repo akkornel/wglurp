@@ -6,9 +6,6 @@ set -e
 # Specify what Git IDs we want from various repos
 SETUPTOOLS_VERSION=cb9e3a35bfc07136c44d942698fc45fc3f12192b # v36.6.0
 PIP_VERSION=022248f6484fe87dc0ef5aec3437f4c7971fd14b #9.0.1
-PYASN1_VERSION=c22b813b9251c35347eace1ea3189d9cbfadfa24 # v0.2.2
-PYLDAP_VERSION=544b1e38f4b790d7e93448ed0d19f5906c0be31f # pyldap-2.4.37
-SYNCREPL_CLIENT_VERSION=e2925b9cc1219b338364b919d9e59c65e1b1337d # v0.95.1
 WGLURP_VERSION=master
 
 # These are the packages we need to install.  There are packages to keep
@@ -16,12 +13,15 @@ WGLURP_VERSION=master
 PERMANENT_PACKAGES=(
 ldap-utils # Helpful LDAP utilities
 libsasl2-modules-gssapi-mit # Needed for LDAP GSSAPI auth
+postgresql-client # For Postgres client libs
 python3.6 # Python 3.6!
 )
 TEMPORARY_PACKAGES=(
 build-essential # Misc. build tools
 libldap2-dev # For building pyldap
+libpq-dev # For building psycopg2
 libsasl2-dev # For building pyldap
+libssl-dev # For building psycopg2
 python3.6-dev # For building pyldap
 )
 
