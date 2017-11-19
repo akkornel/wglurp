@@ -1,7 +1,9 @@
 #!/bin/bash
 # 
 
-# This is the list of trusted GPG keys.  One per line.
+# Make sure we error out if a command fails.
+set -e
+
 TRUSTED_KEYS=(
 FC411D5BA332BE922D2CE7F1A2BF8503E5E5AFC8
 )

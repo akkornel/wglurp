@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Make sure we error out if a command fails
+set -e
+
 SETUPTOOLS_VERSION=cb9e3a35bfc07136c44d942698fc45fc3f12192b # v36.6.0
 PIP_VERSION=022248f6484fe87dc0ef5aec3437f4c7971fd14b #9.0.1
 WGLURP_VERSION=master
