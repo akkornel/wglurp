@@ -31,17 +31,20 @@ apt-get update
 apt-get -y dist-upgrade
 apt-get -y install ${PERMANENT_PACKAGES[@]} ${TEMPORARY_PACKAGES[@]}
 
+# Make a space for Git clones
+mkdir /root/git
+
 # Get setuptools, and build for Python 3.6
-git clone https://github.com/pypa/setuptools.git /root/setuptools
-cd /root/setuptools
+git clone https://github.com/pypa/setuptools.git /root/git/setuptools
+cd /root/git/setuptools
 git checkout -q ${SETUPTOOLS_VERSION}
 python3.6 ./bootstrap.py
 python3.6 ./setup.py build
 python3.6 ./setup.py install
 
 # Get pip, and build for Python 3.6
-git clone https://github.com/pypa/pip.git /root/pip
-cd /root/pip
+git clone https://github.com/pypa/pip.git /root/git/pip
+cd /root/git/pip
 git checkout -q ${PIP_VERSION}
 python3.6 ./setup.py build
 python3.6 ./setup.py install
@@ -49,5 +52,9 @@ python3.6 ./setup.py install
 # Clean up temporary packages
 apt-get -y purge ${TEMPORARY_PACKAGES[@]}
 apt-get -y autoremove
+
+# Clean up Git repos
+cd /root
+rm -rf /root/git
 
 exit 0
