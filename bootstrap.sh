@@ -21,6 +21,7 @@ python3.6 # Python 3.6!
 TEMPORARY_PACKAGES=(
 build-essential # Misc. build tools
 libldap2-dev # For building pyldap
+libsasl2-dev # For building pyldap
 python3.6-dev # For building pyldap
 )
 
@@ -53,30 +54,13 @@ git checkout -q ${PIP_VERSION}
 python3.6 ./setup.py build
 python3.6 ./setup.py install
 
-# Get pyasn1, and build for Python 3.6
-git clone https://github.com/etingof/pyasn1.git /root/pyasn1
-cd /root/pyasn1
-git checkout -q ${PYASN1_VERSION}
-python3.6 ./setup.py build
-python3.6 ./setup.py install
-
-# Get pyldap, and build for Python 3.6
-git clone https://github.com/pyldap/pyldap.git /root/git/pyldap
-cd /root/git/pyldap
-git checkout -q ${PYLDAP_VERSION}
-python3.6 ./setup.py build
-python3.6 ./setup.py install
-
-# Get syncrepl_client, and build for Python 3.6
-git clone https://github.com/akkornel/syncrepl.git /root/git/syncrepl_client
-cd /root/git/syncrepl_client
-git checkout -q ${SYNCREPL_CLIENT_VERSION}
-python3.6 ./setup.py build
-python3.6 ./setup.py install
+# Bring in Python stuff, using pip's hash checking
+pip3.6 install --require-hashes -r /root/bootstrap/requirements/ldap-client.txt
 
 # Clean up temporary packages
 apt-get -y purge ${TEMPORARY_PACKAGES[@]}
 apt-get -y autoremove
+apt-get -y clean
 
 # Clean up Git repos
 cd /root
