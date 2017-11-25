@@ -4,6 +4,10 @@
 # Make sure we error out if a command fails.
 set -e
 
+# Start sending output to a file
+exec 2>&1 1>/root/bootstrap.log
+set -v
+
 # This is the list of trusted GPG key fingerprints.  One per line.
 TRUSTED_KEYS=(
 FC411D5BA332BE922D2CE7F1A2BF8503E5E5AFC8
