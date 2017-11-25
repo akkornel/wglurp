@@ -57,6 +57,13 @@ python3.6 ./setup.py install
 # Bring in Python stuff, using pip's hash checking
 pip3.6 install --require-hashes -r /root/bootstrap/requirements/ldap-client.txt
 
+# Get wglurp, and build for Python 3.6
+git clone git://github.com/akkornel/wglurp.git /root/wglurp
+cd /root/wglurp
+git checkout -q ${WGLURP_VERSION}
+python3.6 ./setup.py build
+python3.6 ./setup.py install
+
 # Clean up temporary packages
 apt-get -y purge ${TEMPORARY_PACKAGES[@]}
 apt-get -y autoremove
