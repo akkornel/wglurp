@@ -23,7 +23,9 @@ libldap2-dev # For building pyldap
 libpq-dev # For building psycopg2
 libsasl2-dev # For building pyldap
 libssl-dev # For building psycopg2
-python3.6-dev # For building pyldap
+libsystemd-dev # For building systemd-python
+pkg-config # For building systemd-python
+python3.6-dev # For building pyldap and systemd-python
 )
 
 # Make sure we won't be prompted for stuff on install.

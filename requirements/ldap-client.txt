@@ -4,3 +4,4 @@ syncrepl_client==0.95.1 --hash=sha256:5628b38500f7f09abe454917793159308a8bbc3466
 IPy==0.83 --hash=sha256:61da5a532b159b387176f6eabf11946e7458b6df8fb8b91ff1d345ca7a6edab8
 psycopg2==2.7.3.2 --hash=sha256:5c3213be557d0468f9df8fe2487eaf2990d9799202c5ff5cb8d394d09fad9b2a --no-binary=psycopg2
 SQLAlchemy==1.1.15 --hash=sha256:8b79a5ed91cdcb5abe97b0045664c55c140aec09e5dd5c01303e23de5fe7a95a
+systemd-python==234 --hash=sha256:fd0e44bf70eadae45aadc292cb0a7eb5b0b6372cd1b391228047d33895db83e7
