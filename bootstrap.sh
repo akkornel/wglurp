@@ -121,7 +121,10 @@ cat - > /usr/sbin/cloud-sql-symlink.sh <<EOF
 #!/bin/sh
 
 SQL_INSTANCE=\$(/usr/bin/curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/DB)
-exec ln -s /run/cloudsql/\${SQL_INSTANCE} /run/.s.PGSQL.5432
+if [ ! -d /run/postgresql ]; then
+    mkdir /run/postgresql
+fi
+exec ln -s /run/cloudsql/\${SQL_INSTANCE} /run/postgresql/.s.PGSQL.5432
 EOF
 chmod a+x /usr/sbin/cloud-sql-symlink.sh
 
