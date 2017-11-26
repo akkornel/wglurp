@@ -4,6 +4,12 @@
 # Make sure we error out if a command fails.
 set -e
 
+# Only run this script during the first boot.
+if [ -f /.startup_script_running ]; then
+    exit 0
+fi
+touch /.startup_script_running
+
 # Start sending output to a file
 exec 2>&1 1>/root/bootstrap.log
 set -v
