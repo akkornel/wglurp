@@ -14,7 +14,7 @@ WGLURP_VERSION=master
 PERMANENT_PACKAGES=(
 ldap-utils # Helpful LDAP utilities
 libsasl2-modules-gssapi-mit # Needed for LDAP GSSAPI auth
-postgresql-client # For Postgres client libs
+postgresql-client-9.6 # For Postgres client libs
 python3.6 # Python 3.6!
 )
 TEMPORARY_PACKAGES=(
@@ -31,6 +31,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 # Set up 3rd-party repositories
 add-apt-repository -y ppa:jonathonf/python-3.6
+cat - > /etc/apt/sources.list.d/pgdg.list <<EOF
+deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main
+EOF
+curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 # Update package lists, bring current packages up-to-date, and install stuff.
 apt-get update
