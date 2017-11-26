@@ -77,6 +77,11 @@ apt-get -y purge ${TEMPORARY_PACKAGES[@]}
 apt-get -y autoremove
 apt-get -y clean
 
+# Install the Cloud SQL Proxy
+wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 \
+     -O /usr/sbin/cloud_sql_proxy
+chmod a+x /usr/sbin/cloud_sql_proxy
+
 # Clean up Git repos
 cd /root
 rm -rf /root/git
