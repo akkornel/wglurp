@@ -6,6 +6,7 @@ set -e
 # Specify what Git IDs we want from various repos
 SETUPTOOLS_VERSION=cb9e3a35bfc07136c44d942698fc45fc3f12192b # v36.6.0
 PIP_VERSION=022248f6484fe87dc0ef5aec3437f4c7971fd14b #9.0.1
+SYNCREPL_CLIENT_VERSION=master
 WGLURP_VERSION=master
 
 # These are the packages we need to install.  There are packages to keep
@@ -56,6 +57,13 @@ python3.6 ./setup.py install
 
 # Bring in Python stuff, using pip's hash checking
 pip3.6 install --require-hashes -r /root/bootstrap/requirements/ldap-client.txt
+
+# Get syncrepl_client, and build for Python 3.6
+git clone git://github.com/akkornel/syncrepl.git /root/git/syncrepl
+cd /root/git/syncrepl
+git checkout -q ${SYNCREPL_CLIENT_VERSION}
+python3.6 ./setup.py build
+python3.6 ./setup.py install
 
 # Get wglurp, and build for Python 3.6
 git clone git://github.com/akkornel/wglurp.git /root/wglurp
