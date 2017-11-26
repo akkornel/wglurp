@@ -81,10 +81,69 @@ apt-get -y purge ${TEMPORARY_PACKAGES[@]}
 apt-get -y autoremove
 apt-get -y clean
 
-# Install the Cloud SQL Proxy
+# Define a target for Cloud SQL
+cat - > /etc/systemd/system/wglurp-sql.target <<EOF
+[Unit]
+Description=Represents WGLURP ready to make SQL connections.
+DefaultDependencies=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Install and set up the Cloud SQL Proxy service
 wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 \
      -O /usr/sbin/cloud_sql_proxy
 chmod a+x /usr/sbin/cloud_sql_proxy
+cat - > /etc/systemd/system/cloud-sql-proxy.service <<EOF
+[Unit]
+Description=Proxies connections to Google Cloud SQL
+Documentation=https://github.com/GoogleCloudPlatform/cloudsql-proxy
+Requires=network-online.target
+After=network-online.target
+DefaultDependencies=true
+ConditionPathExists=/usr/sbin/cloud_sql_proxy
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir /run/cloudsql
+ExecStartPre=/bin/chown root:root /run/cloudsql
+ExecStart=/usr/sbin/cloud_sql_proxy -dir=/run/cloudsql -fuse
+
+[Install]
+WantedBy=wglurp-sql.target
+EOF
+
+# Install and set up a service to make a PostgreSQL symlink
+cat - > /usr/sbin/cloud-sql-symlink.sh <<EOF
+#!/bin/sh
+
+SQL_INSTANCE=\$(/usr/bin/curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/DB)
+exec ln -s /run/cloudsql/\${SQL_INSTANCE} /run/.s.PGSQL.5432
+EOF
+chmod a+x /usr/sbin/cloud-sql-symlink.sh
+
+cat - > /etc/systemd/system/cloud-sql-symlink.service <<EOF
+[Unit]
+Description=Makes a symlink for the Postgres client to connect to the right socket.
+Requires=network-online.target
+After=network-online.target
+DefaultDependencies=true
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/cloud-sql-symlink.sh
+RemainAfterExit=true
+ExecStopPost=/bin/rm -f /run/.s.PGSQL.5432
+
+[Install]
+WantedBy=wglurp-sql.target
+EOF
+
+# Trigger systemd and enable services
+systemctl daemon-reload
+systemctl enable cloud-sql-proxy.service
+systemctl enable cloud-sql-symlink.service
 
 # Clean up Git repos
 cd /root
