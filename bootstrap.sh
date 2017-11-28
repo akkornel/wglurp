@@ -257,5 +257,10 @@ apt-get -y clean
 cd /root
 rm -rf /root/git
 
-# Reboot so that patches can take effect, and to start services!
-exec shutdown -r now
+# If the NO_REBOOT metadata variable is defined, then just exit.
+# Otherwise, reboot so patches can take effect, and to start services!
+if [ ${WGLURP_METADATA_NO_REBOOT:-z} = 'z' ]; then
+    exit 0
+else
+    exec shutdown -r now
+fi
