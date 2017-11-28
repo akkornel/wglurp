@@ -159,4 +159,5 @@ apt-get -y clean
 cd /root
 rm -rf /root/git
 
-exit 0
+# Reboot so that patches can take effect, and to start services!
+exec shutdown -r now
