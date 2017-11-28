@@ -124,6 +124,11 @@ EOF
 # loaded automatically as needed by other services.
 systemctl daemon-reload
 
+# Read in our metadata-based environment variables,
+# just in case we need them later!
+systemctl start wglurp-environment.service
+. /run/wglurp/env
+
 # Cloud SQL Setup
 
 # Define a target for Cloud SQL
