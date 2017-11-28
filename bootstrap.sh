@@ -79,6 +79,8 @@ python3.6 ./setup.py build
 python3.6 ./setup.py install
 
 
+# Cloud SQL Setup
+
 # Define a target for Cloud SQL
 cat - > /etc/systemd/system/wglurp-sql.target <<EOF
 [Unit]
@@ -145,6 +147,8 @@ EOF
 systemctl daemon-reload
 systemctl enable cloud-sql-proxy.service
 systemctl enable cloud-sql-symlink.service
+
+# Clean Up and Reboot!
 
 # Clean up temporary packages
 apt-get -y purge ${TEMPORARY_PACKAGES[@]}
