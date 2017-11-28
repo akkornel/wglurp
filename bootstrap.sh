@@ -185,6 +185,62 @@ systemctl daemon-reload
 systemctl enable cloud-sql-proxy.service
 systemctl enable cloud-sql-symlink.service
 
+# Data file mount setup
+
+# Set up fstab entries for our data mount, and the key mount
+# NOTE: Only the key mount can be mounted automatically;
+# the data mount has to be decrypted first.
+mkdir /mnt/data
+mkdir /mnt/data-key
+cat - >> /etc/fstab <<EOF
+LABEL=data-key    /mnt/data-key  ext4  ro      0 1
+LABEL=wglurp-data /mnt/data      xfs   noauto  0 1
+EOF
+
+# Link to the unencrypted config files
+rm /usr/etc/wglurp.conf /usr/etc/wglurp.d/example
+rmdir /usr/etc/wglurp.d
+ln -s /mnt/data/wglurp.conf /usr/etc/wglurp.conf
+ln -s /mnt/data/wglurp.conf.d /usr/etc/wglurp.d
+
+cat - > /etc/systemd/system/wglurp-data-unlock.service <<EOF
+[Unit]
+Description=Unlock the encrypted data partition
+Requires=network-online.target wglurp-environment.service
+After=network-online.target wglurp-environment.service
+DefaultDependencies=true
+
+[Service]
+Type=oneshot
+EnvironmentFile=/run/wglurp/env
+ExecStart=/usr/bin/gcloud kms decrypt --ciphertext-file=/mnt/data-key/key --plaintext-file=/run/wglurp/data-key --key=${WGLURP_METADATA_DATA_KEY}
+ExecStart=/sbin/cryptsetup --key-file=/run/wglurp/data-key luksOpen /dev/sdb2 wglurp-data
+RemainAfterExit=true
+ExecStopPost=/sbin/cryptsetup luksClose wglurp-data
+ExecStopPost=/bin/rm /run/wglurp/data-key
+EOF
+cat - > /etc/systemd/system/wglurp-data-mount.service <<EOF
+[Unit]
+Description=Mount the encrypted data partition
+Requires=wglurp-data-unlock.service
+After=wglurp-data-unlock.service
+DefaultDependencies=true
+
+[Service]
+Type=oneshot
+EnvironmentFile=/run/wglurp/env
+ExecStart=/bin/mount /mnt/data
+RemainAfterExit=true
+ExecStopPost=/bin/umount -f /mnt/data
+
+[Install]
+WantedBy=wglurp-sql.target
+EOF
+
+# Enable the services from this section.
+# (Again, other services will call us as needed!)
+systemctl daemon-reload
+
 # Clean Up and Reboot!
 
 # Clean up temporary packages
