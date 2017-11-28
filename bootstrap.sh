@@ -79,6 +79,51 @@ python3.6 ./setup.py build
 python3.6 ./setup.py install
 
 
+# Environment Setup
+
+# Set up a run directory
+cat - > /etc/systemd/system/wglurp-run-dir.service <<EOF
+[Unit]
+Description=Create the /run/wglurp directory.
+DefaultDependencies=true
+
+[Service]
+Type=oneshot
+ExecStart=/bin/mkdir /run/wglurp
+RemainAfterExit=true
+ExecStopPost=/bin/rm -rf /run/wglurp
+EOF
+
+# Set up a service that outputs environment variablaes
+cat - > /usr/sbin/wglurp-env.sh <<EOF
+#!/bin/bash
+
+touch /run/wglurp/env
+for var in $(/usr/bin/curl --silent -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/); do
+    if [ $var = 'startup-script' ]; then continue; fi
+    echo "WGLURP_METADATA_${var}=$(/usr/bin/curl --silent -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/${var})" >> /run/wglurp/env
+done
+EOF
+chmod a+x /usr/sbin/wglurp-env.sh
+cat - > /etc/systemd/system/wglurp-environment.service <<EOF
+[Unit]
+Description=Populate /run/wglurp/env
+DefaultDependencies=true
+Requires=wglurp-run-dir.service
+After=wglurp-run-dir.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/wglurp-env.sh
+RemainAfterExit=true
+ExecStopPost=/bin/rm /run/wglurp/env
+EOF
+
+# Trigger systemd to pick up changes
+# NOTE: We don't have any services to enable here; they'll be
+# loaded automatically as needed by other services.
+systemctl daemon-reload
+
 # Cloud SQL Setup
 
 # Define a target for Cloud SQL
