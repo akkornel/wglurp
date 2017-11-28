@@ -160,29 +160,21 @@ WantedBy=wglurp-sql.target
 EOF
 
 # Install and set up a service to make a PostgreSQL symlink
-cat - > /usr/sbin/cloud-sql-symlink.sh <<EOF
-#!/bin/sh
-
-SQL_INSTANCE=\$(/usr/bin/curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/DB)
-if [ ! -d /run/postgresql ]; then
-    mkdir /run/postgresql
-fi
-exec ln -s /run/cloudsql/\${SQL_INSTANCE} /run/postgresql/.s.PGSQL.5432
-EOF
-chmod a+x /usr/sbin/cloud-sql-symlink.sh
-
 cat - > /etc/systemd/system/cloud-sql-symlink.service <<EOF
 [Unit]
 Description=Makes a symlink for the Postgres client to connect to the right socket.
-Requires=network-online.target
-After=network-online.target
+Requires=network-online.target wglurp-environment.service
+After=network-online.target wglurp-environment.service
 DefaultDependencies=true
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/cloud-sql-symlink.sh
+EnvironmentFile=/run/wglurp/env
+ExecStart=/bin/mkdir /run/postgresql
+ExecStart=/bin/ln -s /run/cloudsql/${WGLURP_METADATA_DB} /run/postgresql/.s.PGSQL.5432
 RemainAfterExit=true
-ExecStopPost=/bin/rm -f /run/.s.PGSQL.5432
+ExecStopPost=/bin/rm -f /run/postgresql/.s.PGSQL.5432
+ExecStopPost=/bin/rmdir /run/postgresql
 
 [Install]
 WantedBy=wglurp-sql.target
