@@ -78,10 +78,6 @@ git checkout -q ${WGLURP_VERSION}
 python3.6 ./setup.py build
 python3.6 ./setup.py install
 
-# Clean up temporary packages
-apt-get -y purge ${TEMPORARY_PACKAGES[@]}
-apt-get -y autoremove
-apt-get -y clean
 
 # Define a target for Cloud SQL
 cat - > /etc/systemd/system/wglurp-sql.target <<EOF
@@ -149,6 +145,11 @@ EOF
 systemctl daemon-reload
 systemctl enable cloud-sql-proxy.service
 systemctl enable cloud-sql-symlink.service
+
+# Clean up temporary packages
+apt-get -y purge ${TEMPORARY_PACKAGES[@]}
+apt-get -y autoremove
+apt-get -y clean
 
 # Clean up Git repos
 cd /root
