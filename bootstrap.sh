@@ -9,6 +9,10 @@ PIP_VERSION=022248f6484fe87dc0ef5aec3437f4c7971fd14b #9.0.1
 SYNCREPL_CLIENT_VERSION=master
 WGLURP_VERSION=master
 
+PYTHON_DISTUTILS_EXTRA=https://launchpad.net/python-distutils-extra/trunk/2.39/+download/python-distutils-extra-2.39.tar.gz
+PYTHON_DISTUTILS_EXTRA_SIG=https://launchpad.net/python-distutils-extra/trunk/2.39/+download/python-distutils-extra-2.39.tar.gz.asc
+
+
 # These are the packages we need to install.  There are packages to keep
 # around (like Python), and packages that we can purge before we wrap up.
 PERMANENT_PACKAGES=(
@@ -21,6 +25,7 @@ python3.6 # Python 3.6!
 )
 TEMPORARY_PACKAGES=(
 build-essential # Misc. build tools
+libapt-pkg-dev # For building python-apt
 libldap2-dev # For building pyldap
 libpq-dev # For building psycopg2
 libsasl2-dev # For building pyldap
@@ -60,6 +65,25 @@ python3.6 ./setup.py install
 git clone https://github.com/pypa/pip.git /root/git/pip
 cd /root/git/pip
 git checkout -q ${PIP_VERSION}
+python3.6 ./setup.py build
+python3.6 ./setup.py install
+
+# Install python-distutils-extra, needed by python-apt.
+mkdir /root/python-distutils-extra
+cd /root/python-distutils-extra
+curl -L -o python-distutils-extra.tar.gz $PYTHON_DISTUTILS_EXTRA
+curl -L -o python-distutils-extra.tar.gz.asc $PYTHON_DISTUTILS_EXTRA_SIG
+
+tar -xzf python-distutils-extra.tar.gz 
+cd python-distutils-extra-*
+python3.6 ./setup.py build
+python3.6 ./setup.py install
+
+# Install python-apt
+mkdir /root/python-apt
+apt-get source --download-only python-apt
+tar -xJf python-apt*.tar.xz
+cd python-apt-*
 python3.6 ./setup.py build
 python3.6 ./setup.py install
 
@@ -275,6 +299,8 @@ apt-get -y clean
 # Clean up Git repos
 cd /root
 rm -rf /root/git
+rm -rf /root/python-distutils-extra
+rm -rf /root/python-apt
 
 # If the NO_REBOOT metadata variable is defined, then just exit.
 # Otherwise, reboot so patches can take effect, and to start services!
