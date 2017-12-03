@@ -12,6 +12,8 @@ WGLURP_VERSION=master
 # These are the packages we need to install.  There are packages to keep
 # around (like Python), and packages that we can purge before we wrap up.
 PERMANENT_PACKAGES=(
+krb5-user # Kerberos utilities
+kstart # For Kerberos credentials caches
 ldap-utils # Helpful LDAP utilities
 libsasl2-modules-gssapi-mit # Needed for LDAP GSSAPI auth
 postgresql-client-9.6 # For Postgres client libs
@@ -245,6 +247,23 @@ EOF
 # Enable the services from this section.
 # (Again, other services will call us as needed!)
 systemctl daemon-reload
+
+# Keytab setup
+
+cat - > /etc/systemd/system/wglurp-ldap-keytab.service <<EOF
+[Unit]
+Description=Maintain a Krb5 credentials cache for LDAP
+Requires=network-online.target wglurp-data-mount.service wglurp-run-dir.service
+After=network-online.target wglurp-data-mount.service wglurp-run-dir.service
+DefaultDependencies=true
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/k5start -r stanford.edu -p /run/wglurp/k5start_ldap.pid -K 10 -x -b -f /mnt/data/ldap.keytab -U -k /run/wglurp/k5start_ldap.cache
+PIDFile=/run/wglurp/k5start_ldap.pid
+EOF
+systemctl daemon-reload
+systemctl enable wglurp-ldap-keytab.service
 
 # Clean Up and Reboot!
 
