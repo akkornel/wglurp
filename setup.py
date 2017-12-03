@@ -82,9 +82,11 @@ setup(
 
     python_requires = '>=3.3,<4',
     install_requires = [
+        'boto3'
         'IPy',
         'psycopg2',
         'pyldap',
+        'python_dateutil',
         'SQLAlchemy>=1.1,<1.2',
         'syncrepl-client>=0.96',
     ],
