@@ -47,8 +47,8 @@ apt-get update
 apt-get -y dist-upgrade
 apt-get -y install ${PERMANENT_PACKAGES[@]} ${TEMPORARY_PACKAGES[@]}
 
-# Make a space for Git clones
-mkdir /root/git
+# Make a space for Git clones and other sources
+mkdir /root/git /root/src
 
 # Get setuptools, and build for Python 3.6
 git clone https://github.com/pypa/setuptools.git /root/git/setuptools
@@ -66,6 +66,7 @@ python3.6 ./setup.py build
 python3.6 ./setup.py install
 
 # Install python-distutils-extra, needed by python-apt.
+cd /root/src
 apt-get source --download-only python-distutils-extra
 tar -xzf python-distutils-extra*.tar.gz
 cd python-distutils-extra-*
@@ -73,7 +74,7 @@ python3.6 ./setup.py build
 python3.6 ./setup.py install
 
 # Install python-apt
-mkdir /root/python-apt
+cd /root/src
 apt-get source --download-only python-apt
 tar -xJf python-apt*.tar.xz
 cd python-apt-*
@@ -258,8 +259,7 @@ apt-get -y clean
 # Clean up Git repos
 cd /root
 rm -rf /root/git
-rm -rf /root/python-distutils-extra
-rm -rf /root/python-apt
+rm -rf /root/src
 
 # If the NO_REBOOT metadata variable is defined, then just exit.
 # Otherwise, reboot so patches can take effect, and to start services!
