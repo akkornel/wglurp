@@ -110,12 +110,12 @@ python3.6 ./setup.py install
 # Set up a run directory
 cat - > /etc/systemd/system/wglurp-run-dir.service <<EOF
 [Unit]
-Description=Create the /run/wglurp directory.
+Description=Create the /run/wglurp directory tree
 DefaultDependencies=true
 
 [Service]
 Type=oneshot
-ExecStart=/bin/mkdir /run/wglurp
+ExecStart=/bin/mkdir /run/wglurp /run/wglurp/metrics
 RemainAfterExit=true
 ExecStopPost=/bin/rm -rf /run/wglurp
 EOF
