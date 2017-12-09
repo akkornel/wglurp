@@ -25,6 +25,7 @@ python3.6 # Python 3.6!
 )
 TEMPORARY_PACKAGES=(
 build-essential # Misc. build tools
+intltool # For building python-apt
 libapt-pkg-dev # For building python-apt
 libldap2-dev # For building pyldap
 libpq-dev # For building psycopg2
