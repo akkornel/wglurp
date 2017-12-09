@@ -145,14 +145,8 @@ RemainAfterExit=true
 ExecStopPost=/bin/rm /run/wglurp/env
 EOF
 
-# Trigger systemd to pick up changes
-# NOTE: We don't have any services to enable here; they'll be
-# loaded automatically as needed by other services.
-systemctl daemon-reload
-
 # Read in our metadata-based environment variables,
 # just in case we need them later!
-systemctl start wglurp-environment.service
 . /run/wglurp/env
 
 # Cloud SQL Setup
@@ -188,10 +182,6 @@ ExecStart=/usr/sbin/cloud_sql_proxy -verbose -instances=${WGLURP_METADATA_DB}=tc
 [Install]
 WantedBy=wglurp-sql.target
 EOF
-
-# Trigger systemd and enable services
-systemctl daemon-reload
-systemctl enable cloud-sql-proxy.service
 
 # Data file mount setup
 
@@ -245,10 +235,6 @@ ExecStopPost=/bin/umount -f /mnt/data
 WantedBy=wglurp-sql.target
 EOF
 
-# Enable the services from this section.
-# (Again, other services will call us as needed!)
-systemctl daemon-reload
-
 # Keytab setup
 
 cat - > /etc/systemd/system/wglurp-ldap-keytab.service <<EOF
@@ -263,10 +249,13 @@ Type=forking
 ExecStart=/usr/bin/k5start -r stanford.edu -p /run/wglurp/k5start_ldap.pid -K 10 -x -b -f /mnt/data/ldap.keytab -U -k /run/wglurp/k5start_ldap.cache
 PIDFile=/run/wglurp/k5start_ldap.pid
 EOF
-systemctl daemon-reload
-systemctl enable wglurp-ldap-keytab.service
 
 # Clean Up and Reboot!
+
+# Trigger systemd reload, and enable appropriate services
+systemctl daemon-reload
+systemctl enable wglurp-sql.target
+
 
 # Clean up temporary packages
 apt-get -y purge ${TEMPORARY_PACKAGES[@]}
