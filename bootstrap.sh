@@ -175,37 +175,15 @@ cat - > /etc/systemd/system/cloud-sql-proxy.service <<EOF
 [Unit]
 Description=Proxies connections to Google Cloud SQL
 Documentation=https://github.com/GoogleCloudPlatform/cloudsql-proxy
-Requires=network-online.target
-After=network-online.target
+Requires=network-online.target wglurp-environment.service
+After=network-online.target wglurp-environment.service
 DefaultDependencies=true
 ConditionPathExists=/usr/sbin/cloud_sql_proxy
 
 [Service]
 Type=simple
-ExecStartPre=/bin/mkdir /run/cloudsql
-ExecStartPre=/bin/chown root:root /run/cloudsql
-ExecStart=/usr/sbin/cloud_sql_proxy -dir=/run/cloudsql -fuse
-
-[Install]
-WantedBy=wglurp-sql.target
-EOF
-
-# Install and set up a service to make a PostgreSQL symlink
-cat - > /etc/systemd/system/cloud-sql-symlink.service <<EOF
-[Unit]
-Description=Makes a symlink for the Postgres client to connect to the right socket.
-Requires=network-online.target wglurp-environment.service
-After=network-online.target wglurp-environment.service
-DefaultDependencies=true
-
-[Service]
-Type=oneshot
 EnvironmentFile=/run/wglurp/env
-ExecStart=/bin/mkdir /run/postgresql
-ExecStart=/bin/ln -s /run/cloudsql/${WGLURP_METADATA_DB} /run/postgresql/.s.PGSQL.5432
-RemainAfterExit=true
-ExecStopPost=/bin/rm -f /run/postgresql/.s.PGSQL.5432
-ExecStopPost=/bin/rmdir /run/postgresql
+ExecStart=/usr/sbin/cloud_sql_proxy -verbose -instances=${WGLURP_METADATA_DB}=tcp:5432
 
 [Install]
 WantedBy=wglurp-sql.target
@@ -214,7 +192,6 @@ EOF
 # Trigger systemd and enable services
 systemctl daemon-reload
 systemctl enable cloud-sql-proxy.service
-systemctl enable cloud-sql-symlink.service
 
 # Data file mount setup
 
