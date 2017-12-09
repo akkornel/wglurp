@@ -121,7 +121,7 @@ ExecStopPost=/bin/rm -rf /run/wglurp
 EOF
 
 # Set up a service that outputs environment variablaes
-cat - > /usr/sbin/wglurp-env.sh <<EOF
+cat - > /usr/sbin/wglurp-env.sh <<'EOF'
 #!/bin/bash
 
 touch /run/wglurp/env
@@ -171,7 +171,7 @@ EOF
 wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 \
      -O /usr/sbin/cloud_sql_proxy
 chmod a+x /usr/sbin/cloud_sql_proxy
-cat - > /etc/systemd/system/cloud-sql-proxy.service <<EOF
+cat - > /etc/systemd/system/cloud-sql-proxy.service <<'EOF'
 [Unit]
 Description=Proxies connections to Google Cloud SQL
 Documentation=https://github.com/GoogleCloudPlatform/cloudsql-proxy
@@ -211,7 +211,7 @@ rmdir /usr/etc/wglurp.d
 ln -s /mnt/data/wglurp.conf /usr/etc/wglurp.conf
 ln -s /mnt/data/wglurp.conf.d /usr/etc/wglurp.d
 
-cat - > /etc/systemd/system/wglurp-data-unlock.service <<EOF
+cat - > /etc/systemd/system/wglurp-data-unlock.service <<'EOF'
 [Unit]
 Description=Unlock the encrypted data partition
 Requires=network-online.target wglurp-environment.service
