@@ -197,7 +197,8 @@ mkdir /mnt/data
 mkdir /mnt/data-key
 cat - >> /etc/fstab <<EOF
 LABEL=data-key    /mnt/data-key  ext4  ro      0 1
-LABEL=wglurp-data /mnt/data      xfs   noauto  0 1
+# The mount for /mnt/data is defined as a native systemd mount, because
+# we need to unlock the volume before it can be used.
 EOF
 
 # Link to the unencrypted config files
@@ -210,6 +211,7 @@ echo 'Setup wglurp-data-unlock and wglurp-data-mount'
 cat - > /etc/systemd/system/wglurp-data-unlock.service <<'EOF'
 [Unit]
 Description=Unlock the encrypted data partition
+RequiresMountsFor=/mnt/data-key
 Requires=network-online.target wglurp-environment.service
 After=network-online.target wglurp-environment.service
 DefaultDependencies=true
@@ -223,22 +225,18 @@ RemainAfterExit=true
 ExecStopPost=/sbin/cryptsetup luksClose wglurp-data
 ExecStopPost=/bin/rm /run/wglurp/data-key
 EOF
-cat - > /etc/systemd/system/wglurp-data-mount.service <<EOF
+cat - > /etc/systemd/system/mnt-data.mount <<EOF
 [Unit]
 Description=Mount the encrypted data partition
 Requires=wglurp-data-unlock.service
 After=wglurp-data-unlock.service
 DefaultDependencies=true
 
-[Service]
-Type=oneshot
-EnvironmentFile=/run/wglurp/env
-ExecStart=/bin/mount /mnt/data
-RemainAfterExit=true
-ExecStopPost=/bin/umount -f /mnt/data
-
-[Install]
-WantedBy=wglurp-sql.target
+[Mount]
+What=LABEL=wglurp-data
+Where=/mnt/data
+Type=xfs
+Options=noauto
 EOF
 
 # Keytab setup
@@ -247,8 +245,9 @@ echo 'Setup wglurp-keytab'
 cat - > /etc/systemd/system/wglurp-ldap-keytab.service <<EOF
 [Unit]
 Description=Maintain a Krb5 credentials cache for LDAP
-Requires=network-online.target wglurp-data-mount.service wglurp-run-dir.service
-After=network-online.target wglurp-data-mount.service wglurp-run-dir.service
+RequiresMountsFor=/mnt/data
+Requires=network-online.target wglurp-run-dir.service
+After=network-online.target wglurp-run-dir.service
 DefaultDependencies=true
 
 [Service]
