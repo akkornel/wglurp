@@ -167,17 +167,6 @@ EOF
 
 # Cloud SQL Setup
 
-# Define a target for Cloud SQL
-echo 'Setup wglurp-sql'
-cat - > /etc/systemd/system/wglurp-sql.target <<EOF
-[Unit]
-Description=Represents WGLURP ready to make SQL connections.
-DefaultDependencies=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
 # Install and set up the Cloud SQL Proxy service
 echo 'Setup cloud_sql_proxy and cloud-sql-proxy'
 wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 \
@@ -196,9 +185,6 @@ ConditionPathExists=/usr/sbin/cloud_sql_proxy
 Type=simple
 EnvironmentFile=/run/wglurp/env
 ExecStart=/usr/sbin/cloud_sql_proxy -verbose -instances=${WGLURP_METADATA_DB}=tcp:5432
-
-[Install]
-WantedBy=wglurp-sql.target
 EOF
 
 # Data file mount setup
