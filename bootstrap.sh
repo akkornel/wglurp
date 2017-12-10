@@ -38,6 +38,8 @@ export DEBIAN_FRONTEND=noninteractive
 # Get the Slack URL, for notifications
 export SLACK_URL=$(curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/SLACK_URL)
 
+# Packaged Software Installation
+
 # Set up 3rd-party repositories
 echo 'Adding apt repos'
 add-apt-repository -y ppa:jonathonf/python-3.6
@@ -57,6 +59,8 @@ apt-get -q -q -y install ${PERMANENT_PACKAGES[@]} ${TEMPORARY_PACKAGES[@]}
 
 # Make a space for Git clones and other sources
 mkdir /root/git /root/src
+
+# Python Prerequisite Software Installation
 
 # Get setuptools, and build for Python 3.6
 curl -X POST --data-urlencode 'payload={"text": "SW install 1..."}' ${SLACK_URL}
@@ -93,6 +97,8 @@ tar -xJf python-apt*.tar.xz
 cd python-apt-*
 python3.6 ./setup.py -q build
 python3.6 ./setup.py -q install
+
+# Python Software Installation
 
 # Bring in Python stuff, using pip's hash checking
 curl -X POST --data-urlencode 'payload={"text": "SW install 2..."}' ${SLACK_URL}
@@ -158,10 +164,6 @@ ExecStart=/usr/sbin/wglurp-env.sh
 RemainAfterExit=true
 ExecStopPost=/bin/rm /run/wglurp/env
 EOF
-
-# Read in our metadata-based environment variables,
-# just in case we need them later!
-. /run/wglurp/env
 
 # Cloud SQL Setup
 
